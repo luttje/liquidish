@@ -1,7 +1,7 @@
-import { AbstractTransformationStrategy } from './abstract-transformation-strategy';
-import { BaseTransformationStrategy } from './base-transformation-strategy';
-import { ISPConfigTransformationStrategy } from './ispconfig-transformation-strategy';
-import { PHPTransformationStrategy } from './php-transformation-strategy';
+import { AbstractTransformationStrategy } from './abstract-transformation-strategy.js';
+import { BaseTransformationStrategy } from './base-transformation-strategy.js';
+import { ISPConfigTransformationStrategy } from './ispconfig-transformation-strategy.js';
+import { PHPTransformationStrategy } from './php-transformation-strategy.js';
 
 export {
     AbstractTransformationStrategy,

@@ -1,11 +1,11 @@
-import { AbstractTransformationStrategy } from "./abstract-transformation-strategy";
+import { TransformParser } from "../transformer/parser.js";
+import { AbstractTransformationStrategy } from "./abstract-transformation-strategy.js";
 
-/**
- * @typedef Transformation
- * @property {RegExp} regex
- * @property {string} strategyMethodName
- * @property {import("../transformer").TransformParser|null} [parseFunction]
- */
+export type Transformation = {
+    regex: RegExp;
+    strategyMethodName: string;
+    parseFunction?: TransformParser|null;
+};
 
 /**
  * @type {Transformation[]}
@@ -19,7 +19,7 @@ const defaultTransformations = [];
  * @internal
  * @param {string} strategyMethodName The name of the related method in the transformation strategy
  * @param {RegExp} regex The regex to add
- * @param {import("../transformer").TransformParser|null} [parseFunction]  The function to use for parsing the match. What it returns will be given to the strategy method. If null, the matched groups will be given to the strategy method directly.
+ * @param {TransformParser|null} [parseFunction]  The function to use for parsing the match. What it returns will be given to the strategy method. If null, the matched groups will be given to the strategy method directly.
  */
 function addDefaultTransform(strategyMethodName, regex, parseFunction = null) {
     defaultTransformations.push({ regex, strategyMethodName, parseFunction });
@@ -173,14 +173,13 @@ addDefaultTransform('unless', /{%\s*unless\s*(\w+)\s*%}/g);
 addDefaultTransform('endunless', /{%\s*endunless\s*%}/g);
 
 /**
- * @augments AbstractTransformationStrategy
  * @public
  */
-export class BaseTransformationStrategy extends AbstractTransformationStrategy {
+export abstract class BaseTransformationStrategy extends AbstractTransformationStrategy {
     /**
      * @inheritdoc
      */
-    getTransformations() {
+    override getTransformations(): Transformation[] {
         return defaultTransformations;
     }
 }

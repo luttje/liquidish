@@ -1,0 +1,9 @@
+<div>
+    {tmpl_if name="some_variable"}
+        {tmpl_if name="other_viable"}Wut?{/tmpl_if}
+        <p>{tmpl_var name="some_variable"}</p>
+    {tmpl_else}
+        {tmpl_if name="other_viable"}Wut?{/tmpl_if}
+        <p>{tmpl_var name="other_variable"}</p>
+    {/tmpl_if}
+</div>

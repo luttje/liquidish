@@ -1,9 +1,9 @@
-import { BaseTransformationStrategy } from './base-transformation-strategy';
-import { buildVariablesScope, getIndentationFromLineStart, readComponentWithIndentation } from '../utils';
-import { LiquidishTransformer } from "../transformer";
+import { BaseTransformationStrategy, Transformation } from './base-transformation-strategy.js';
+import { buildVariablesScope, getIndentationFromLineStart, readComponentWithIndentation } from '../utils.js';
+import { TransformParser } from '../transformer/parser.js';
 
 /**
- * @type {import('./base-transformation-strategy').Transformation[]}
+ * @type {Transformation[]}
  * @internal
  */
 const defaultTransformations = [];
@@ -14,7 +14,7 @@ const defaultTransformations = [];
  * @internal
  * @param {string} strategyMethodName The name of the related method in the transformation strategy
  * @param {RegExp} regex The regex to add
- * @param {function(LiquidishTransformer, ...any): {}|null} [parseFunction]  The function to use for parsing the match. What it returns will be given to the strategy method. If null, the matched groups will be given to the strategy method directly.
+ * @param {TransformParser|null} [parseFunction]  The function to use for parsing the match. What it returns will be given to the strategy method. If null, the matched groups will be given to the strategy method directly.
  */
 function addDefaultTransform(strategyMethodName, regex, parseFunction = null) {
     defaultTransformations.push({ regex, strategyMethodName, parseFunction });
@@ -41,15 +41,13 @@ addDefaultTransform('dyninclude', /{%\s*dyninclude\s*((?:'[^']+?)'|"(?:[^']+?)")
 addDefaultTransform('hook', /{%\s*hook\s*((?:'[^']+?)'|"(?:[^']+?)"){1}\s*%}/g);
 
 /**
- * @augments BaseTransformationStrategy
  * @public
  */
 export class ISPConfigTransformationStrategy extends BaseTransformationStrategy {
     /**
      * @inheritdoc
-     * @override
      */
-    getTransformations() {
+    override getTransformations(): Transformation[] {
         return [
             ...super.getTransformations(),
             ...defaultTransformations,
@@ -59,7 +57,7 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
     /**
      * @inheritdoc
      */
-    comment(comment) {
+    override comment(comment: string): string {
         if (this.transformer.showComments === true) {
             return `<!--${comment}-->`;
         }
@@ -70,7 +68,7 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
     /**
      * @inheritdoc
      */
-    render(component, variables, offset, string) {
+    override render(component: string, variables: Record<string, string>, offset: number, string: string): string {
         const { contents, path } = readComponentWithIndentation(this.transformer.getPath(), component, getIndentationFromLineStart(string, offset));
 
         this.transformer.pushToScope({
@@ -84,7 +82,7 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
     /**
      * @inheritdoc
      */
-    for(itemName, collectionName, statement) {
+    override for(itemName: string, collectionName: string, statement: string): string {
         const scope = this.transformer.getScope();
 
         if (!Array.isArray(scope[collectionName])) {
@@ -112,7 +110,7 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
     /**
      * @inheritdoc
      */
-    if(name, op, value) {
+    override if(name: string, op: string, value: string): string {
         if (op && value) {
             return `{tmpl_if name="${name}" op="${op}" value="${value}"}`;
         }
@@ -123,7 +121,7 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
     /**
      * @inheritdoc
      */
-    elsif(name, op, value) {
+    override elsif(name: string, op: string, value: string): string {
         if (op && value) {
             return `{tmpl_elseif name="${name}" op="${op}" value="${value}"}`;
         }
@@ -134,35 +132,35 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
     /**
      * @inheritdoc
      */
-    else() {
+    override else(): string {
         return '{tmpl_else}';
     }
 
     /**
      * @inheritdoc
      */
-    endif() {
+    override endif(): string {
         return '{/tmpl_if}';
     }
 
     /**
      * @inheritdoc
      */
-    unless(name) {
+    override unless(name: string): string {
         return `{tmpl_unless name="${name}"}`;
     }
 
     /**
      * @inheritdoc
      */
-    endunless() {
+    override endunless(): string {
         return '{/tmpl_unless}';
     }
 
     /**
      * @inheritdoc
      */
-    variable(variable) {
+    override variable(variable: string): string {
         const scope = this.transformer.getScope();
 
         // If the variable is defined in the current scope, use it
@@ -174,35 +172,20 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
         return `{tmpl_var name="${variable}"}`;
     }
 
-    /**
-     * @param {string} name
-     * @returns {string}
-     */
-    loop(name) {
+    public loop(name: string): string {
         return `{tmpl_loop name="${name}"}`;
     }
 
-    /**
-     * @returns {string}
-     */
-    endloop() {
+    public endloop(): string {
         return '{/tmpl_loop}';
     }
 
-    /**
-     * @param {string} component
-     * @returns {string}
-     */
-    dyninclude(component) {
+    public dyninclude(component: string): string {
         component = component.slice(1, -1); // trim quotes
         return `{tmpl_dyninclude name="${component}"}`;
     }
 
-    /**
-     * @param {string} hookName
-     * @returns {string}
-     */
-    hook(hookName) {
+    public hook(hookName: string): string {
         hookName = hookName.slice(1, -1); // trim quotes
         return `{tmpl_hook name="${hookName}"}`;
     }

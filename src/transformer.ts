@@ -1,25 +1,19 @@
-import { AbstractTransformationStrategy } from "./strategies/abstract-transformation-strategy";
+import { AbstractTransformationStrategy } from "./strategies/abstract-transformation-strategy.js";
+import { Transformation } from "./strategies/base-transformation-strategy.js";
+import { TransformParser } from "./transformer/parser.js";
+import { StrategyBuilder } from "./transformer/strategy-builder.js";
 
-/**
- * @typedef {Object} TransformParser
- * @type {function}
- * @param {LiquidishTransformer} transformer
- * @param {any[]} args
- * @returns {any[]}
- */
+export type LiquidishTransformerOptions = {
+    strategyBuilder?: StrategyBuilder;
+    showComments?: boolean;
+};
 
-/**
- * @typedef {Object} StrategyBuilder
- * @type {function}
- * @param {LiquidishTransformer} transformer
- * @returns {AbstractTransformationStrategy}
- */
-
-/**
- * @typedef {Object} LiquidishTransformerOptions
- * @property {StrategyBuilder} [strategyBuilder]
- * @property {boolean} [showComments]
- */
+export type TransformContentsOptions = {
+    contents: string;
+    regex: RegExp;
+    strategyMethodName: string;
+    parseFunction?: TransformParser;
+};
 
 /**
  * The LiquidishTransformer is responsible for transforming the contents of a
@@ -28,50 +22,43 @@ import { AbstractTransformationStrategy } from "./strategies/abstract-transforma
  * @public
  */
 export class LiquidishTransformer {
+
+    public showComments: boolean;
+
+    private strategy: AbstractTransformationStrategy;
+
+    private transformRegexes: Transformation[];
+
     /**
-     * @param {LiquidishTransformerOptions} options
+     * Used to store nested scopes for variables
      */
-    constructor(options = {}) {
+    private variableScopes: Record<string, any>[];
+
+    /**
+     * Used to keep track of the current file being transformed
+     */
+    private basePath: string | null;
+
+    constructor(options: LiquidishTransformerOptions = {}) {
         if (!options.strategyBuilder) {
             throw new Error('No strategy builder provided');
         }
 
         this.showComments = options.showComments || false;
 
-        /**
-         * @type {AbstractTransformationStrategy}
-         * @private
-         */
         this.strategy = options.strategyBuilder(this);
 
-        /**
-         * @type {import("./strategies/base-transformation-strategy").Transformation[]}
-         * @private
-         */
         this.transformRegexes = this.strategy.getTransformations() || [];
 
-        /**
-         * Used to store nested scopes for variables
-         * @type {Record<string, any>[]}
-         * @private
-         */
         this.variableScopes = [];
 
-        /**
-         * Used to keep track of the current file being transformed
-         * @type {string|null}
-         * @private
-         */
         this.basePath = null;
     }
 
     /**
      * Create a new scope object and push it onto the stack
-     *
-     * @param {Record<string, any>} variables
-     * @returns {Record<string, any>}
      */
-    pushToScope(variables) {
+    pushToScope(variables: Record<string, any>): Record<string, any> {
         this.variableScopes.push(variables);
 
         return this.variableScopes[this.variableScopes.length - 1];
@@ -79,19 +66,15 @@ export class LiquidishTransformer {
 
     /**
      * Get the topmost scope from the stack
-     *
-     * @returns {Record<string, any>}
      */
-    peekScope() {
+    peekScope(): Record<string, any>  {
         return this.variableScopes[this.variableScopes.length - 1];
     }
 
     /**
      * Remove the topmost scope from the stack
-     *
-     * @returns {Record<string, any>}
      */
-    popScope() {
+    popScope(): Record<string, any> {
         // Remove the topmost scope from the stack
         if (this.variableScopes.length > 0) {
             const pop = this.variableScopes.pop();
@@ -105,11 +88,8 @@ export class LiquidishTransformer {
     /**
      * Return the entire scope as a flat key and value map, letting
      * later scopes override earlier ones.
-     *
-     * @returns {Record<string, any|any[]>}
      */
-    getScope() {
-        /** @type {Record<string, any|any[]>} */
+    getScope(): Record<string, any|any[]> {
         const scope = {};
 
         for (const s of this.variableScopes) {
@@ -122,20 +102,9 @@ export class LiquidishTransformer {
     }
 
     /**
-     * @typedef {Object} TransformContentsOptions
-     * @property {string} contents
-     * @property {RegExp} regex
-     * @property {string} strategyMethodName
-     * @property {TransformParser|undefined} parseFunction
-     */
-
-    /**
      * Transform the provided contents using the given strategy.
-     *
-     * @param {TransformContentsOptions} options
-     * @returns {string}
      */
-    transformContents({ contents, regex, strategyMethodName, parseFunction }) {
+    transformContents({ contents, regex, strategyMethodName, parseFunction }: TransformContentsOptions): string {
         const transformer = this;
 
         if (parseFunction) {
@@ -158,10 +127,8 @@ export class LiquidishTransformer {
 
     /**
      * Get the current path of the file being transformed
-     *
-     * @returns {string}
      */
-    getPath() {
+    getPath(): string {
         const topScope = this.peekScope();
 
         if (topScope?.path) {
@@ -173,12 +140,8 @@ export class LiquidishTransformer {
 
     /**
      * Transforms the provided contents to the format provided by the strategy.
-     *
-     * @param {string} contents
-     * @param {string|null} path
-     * @returns {string}
      */
-    transform(contents, path = null) {
+    transform(contents: string, path?: string): string {
         if (path) {
             this.basePath = path;
         }

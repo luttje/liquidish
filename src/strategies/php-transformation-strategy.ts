@@ -1,5 +1,5 @@
-import { BaseTransformationStrategy } from './base-transformation-strategy';
-import { buildVariablesScope, getIndentationFromLineStart, readComponentWithIndentation } from '../utils';
+import { BaseTransformationStrategy, Transformation } from './base-transformation-strategy.js';
+import { buildVariablesScope, getIndentationFromLineStart, readComponentWithIndentation } from '../utils.js';
 
 /**
  * @augments BaseTransformationStrategy
@@ -9,8 +9,7 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
     /**
      * @inheritdoc
      */
-    getTransformations() {
-        /** @type {import('./base-transformation-strategy').Transformation[]} */
+    override getTransformations(): Transformation[] {
         const transformations = [];
 
         transformations.push(...super.getTransformations());
@@ -26,7 +25,7 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
     /**
      * @inheritdoc
      */
-    comment(comment) {
+    override comment(comment: string): string {
         if (this.transformer.showComments === true) {
             return `<!--${comment}-->`;
         }
@@ -37,7 +36,7 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
     /**
      * @inheritdoc
      */
-    render(component, variables, offset, string) {
+    override render(component: string, variables: Record<string, string>, offset: number, string: string): string {
         const { contents, path } = readComponentWithIndentation(this.transformer.getPath(), component, getIndentationFromLineStart(string, offset));
 
         this.transformer.pushToScope({
@@ -51,7 +50,7 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
     /**
      * @inheritdoc
      */
-    for(itemName, collectionName, statement) {
+    override for(itemName: string, collectionName: string, statement: string): string {
         const scope = this.transformer.getScope();
 
         if (!Array.isArray(scope[collectionName])) {
@@ -76,7 +75,7 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
     /**
      * @inheritdoc
      */
-    if(name, op, value) {
+    override if(name: string, op: string, value: string): string {
         if (op && value) {
             return `<?php if ($${name} ${op} '${value}') : ?>`;
         }
@@ -87,7 +86,7 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
     /**
      * @inheritdoc
      */
-    elsif(name, op, value) {
+    override elsif(name: string, op: string, value: string): string {
         if (op && value) {
             return `<?php elseif ($${name} ${op} '${value}') : ?>`;
         }
@@ -98,35 +97,35 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
     /**
      * @inheritdoc
      */
-    else() {
+    override else(): string {
         return '<?php else : ?>';
     }
 
     /**
      * @inheritdoc
      */
-    endif() {
+    override endif(): string {
         return '<?php endif; ?>';
     }
 
     /**
      * @inheritdoc
      */
-    unless(name) {
+    override unless(name: string): string {
         return `<?php if (!$${name}) : ?>`;
     }
 
     /**
      * @inheritdoc
      */
-    endunless() {
+    override endunless(): string {
         return '<?php endif; ?>';
     }
 
     /**
      * @inheritdoc
      */
-    variable(variable) {
+    override variable(variable: string): string {
         const scope = this.transformer.getScope();
 
         // If the variable is defined in the current scope, use it
@@ -138,11 +137,7 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
         return `<?php echo $${variable}; ?>`;
     }
 
-    /**
-     * @param {string} component
-     * @returns {string}
-     */
-    include(component) {
+    public include(component: string): string {
         component = component.slice(1, -1); // trim quotes
         return `<?php include '${component}'; ?>`;
     }

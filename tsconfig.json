@@ -4,13 +4,14 @@
         "checkJs": true,
 
         "lib": ["es2020"],
+        "module": "esnext",
         "moduleResolution": "node",
 
         "declaration": true,
-        "emitDeclarationOnly": true,
         "declarationMap": true,
+        "declarationDir": "./dist/types",
         "stripInternal": true,
-        "outDir": "./dist"
+        "outDir": "./dist/esm"
     },
 
     "include": [

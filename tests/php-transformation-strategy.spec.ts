@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { resolve } from 'path';
 import { fixturesPath, readFixtureFile } from './test-utils';
+import { LiquidishTransformer } from '../src/transformer';
+import { PHPTransformationStrategy } from '../src/strategies/php-transformation-strategy';
 
-const LiquidishTransformer = global.LiquidishTransformer;
-const PHPTransformationStrategy = global.PHPTransformationStrategy;
-
-function getPHPConfigTransform(contents, path) {
+function getPHPConfigTransform(contents: string, path?: string) {
+    path = path ?? fixturesPath;
     return new LiquidishTransformer({
         strategyBuilder: (transformer) => new PHPTransformationStrategy(transformer)
-    }).transform(contents, path ?? fixturesPath);
+    }).transform(contents, path);
 }
 
 describe('PHP Transformation Strategy', () => {

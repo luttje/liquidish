@@ -137,6 +137,13 @@ describe('RegExp Tests for if', () => {
         // Matches with empty value
         assertMatch(regexForIf, '{% if VARIABLE OPERATOR "" %} {% endif %}');
         assertMatch(regexForIf, `{% if VARIABLE OPERATOR '' %} {% endif %}`);
+        assertMatch(regexForIf, `{% if VARIABLE != '' %} \n{% if VARIABLE2 == 'review' %}\n{% endif %}\n {% endif %}`);
+        assertMatch(regexForIf, `{% if VARIABLE != '' %} \n{% if VARIABLE2 == 'review' %}\n{% endif %}\n {% endif %}`);
+        assertMatch(regexForIf, `{% if VARIABLE >= '' %} \n{% if VARIABLE2 == 'review' %}\n{% endif %}\n {% endif %}`);
+        assertMatch(regexForIf, `{% if VARIABLE <= '' %} \n{% if VARIABLE2 == "review" %}\n{% endif %}\n {% endif %}`);
+        assertMatch(regexForIf, `{% if VARIABLE <= "" %} \n{% if VARIABLE2 == "review" %}\n{% endif %}\n {% endif %}`);
+        assertMatch(regexForIf, `{% if VARIABLE > '' %} \n{% if VARIABLE2 == 'review' %}\n{% endif %}\n {% endif %}`);
+        assertMatch(regexForIf, `{% if VARIABLE < '' %} \n{% if VARIABLE2 == 'review' %}\n{% endif %}\n {% endif %}`);
 
         // Try with some weird or missing spaces
         assertMatch(regexForIf, '{%if VARIABLE OPERATOR "VALUE" %} {% endif %}');

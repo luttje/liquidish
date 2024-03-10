@@ -6,13 +6,17 @@
 
 This variant of [Liquid](https://shopify.github.io/liquid/) was created to compile Liquid-like syntax to another templating language. It was created to compile to ISPConfig's `tpl` syntax, seeing how it does not have proper IDE support and is not as flexible as Liquid.
 
-Liquidish is designed to work with [Vite](https://vitejs.dev/), but it can be used with any build tool that allows transforming files *(e.g: Webpack and Rollup)*.
+> [**🔭 Check out `luttje/ispconfig-tailwind-theme`**](https://github.com/luttje/ispconfig-tailwind-theme) for an example of how this package can be used.
+
+&nbsp;
 
 > [!WARNING]
 > This is a work in progress. It's not finished yet.
 > The documentation below may be incorrect or incomplete.
 
 ## 🚀 Using Liquidish
+
+Liquidish is designed to work with [Vite](https://vitejs.dev/), but it can be used with any build tool that allows transforming files *(e.g: Webpack and Rollup)*.
 
 We'll assume you have a Vite project set up. If not, you can create one with `npm init vite@latest`.
 

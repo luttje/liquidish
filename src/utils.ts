@@ -2,6 +2,10 @@ import indentString from 'indent-string';
 import { resolve, dirname } from 'path';
 import { existsSync, readFileSync } from 'fs';
 
+export function refreshedRegex(regex: RegExp) {
+    return new RegExp(regex.source, regex.flags);
+}
+
 /**
  * Trims the trailing newline from a string.
  *

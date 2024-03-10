@@ -1,4 +1,5 @@
 import { TransformParser } from "../transformer/parser.js";
+import { refreshedRegex } from "../utils.js";
 import { AbstractTransformationStrategy } from "./abstract-transformation-strategy.js";
 
 export type Transformation = {
@@ -36,7 +37,8 @@ function addDefaultTransform(strategyMethodName, regex, parseFunction = null) {
  */
 
 // {% comment %}\nThis is a comment\nwith multiple lines\n{% endcomment %}
-addDefaultTransform('comment', /{%\s*comment\s*%}([\s\S]*?){%\s*endcomment\s*%}/g);
+export const regexForComment = /{%\s*comment\s*%}([\s\S]*?){%\s*endcomment\s*%}/g;
+addDefaultTransform('comment', regexForComment);
 
 // {% render 'COMPONENT' %}
 // {% render 'COMPONENT', variable: 'value', another: 'value' %}
@@ -48,7 +50,9 @@ addDefaultTransform('comment', /{%\s*comment\s*%}([\s\S]*?){%\s*endcomment\s*%}/
 //     ]
 // }
 // NOTE: For simplicty sake the JSON cannot contain %}
-addDefaultTransform('render', /{%\s*render\s*((?:'[^']+?)'|"(?:[^']+?)"){1}(?:\s*,\s*((?:[^%]+|%(?!}))*))*?\s*%}/g, (transformer, component, variablesString) => {
+export const regexForRender = /{%\s*render\s*((?:'[^']+?)'|"(?:[^']+?)"){1}(?:\s*,\s*((?:[^%]+?|%(?!}))*))*?\s*%}/g;
+export const regexForVariableString = /(\w+):\s*((?:"(?:[^"\\]|\\.)*?"|'(?:[^'\\]|\\.)*?'))/g;
+addDefaultTransform('render', regexForRender, (transformer, component, variablesString) => {
     const variables = {};
 
     if (variablesString) {
@@ -65,7 +69,7 @@ addDefaultTransform('render', /{%\s*render\s*((?:'[^']+?)'|"(?:[^']+?)"){1}(?:\s
             }
         } catch (e) {
             // It's not JSON, so it's a string with key-value pairs
-            variablesString.replace(/(\w+):\s*((?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'))/g, (match, name, value) => {
+            variablesString.replace(regexForVariableString, (match, name, value) => {
                 const quoteType = value[0];
                 value = value.slice(1, -1);
 
@@ -88,20 +92,21 @@ addDefaultTransform('render', /{%\s*render\s*((?:'[^']+?)'|"(?:[^']+?)"){1}(?:\s
 // {% for item in items %}
 //     {{ item[0] }}="{{ item[1] }}"
 // {% endfor %}
-addDefaultTransform('for', /\{%\s*for\s+(\w+)\s+in\s+(\w+)\s*%\}(.*?)\{%\s*endfor\s*%\}/gs, (transformer, itemName, collectionName, statement) => {
+export const regexForLoopFor = /\{%\s*for\s+(\w+)\s+in\s+(\w+)\s*%\}(.*?)\{%\s*endfor\s*%\}/gs;
+addDefaultTransform('for', regexForLoopFor, (transformer, itemName, collectionName, statement) => {
     const scope = transformer.getScope();
-
-    if (!Array.isArray(scope[collectionName])) {
-        if (scope[collectionName] === undefined) {
-            // This will happen when vite transforms the file.
-            // return false;
-        }
-
-        throw new Error(`The collection ${collectionName} is not an array. It's a ${typeof scope[collectionName]} (in ${transformer.getPath()})}`);
-    }
 
     // trim only leading whitespace
     statement = statement.replace(/^\s+/, '');
+
+    // Check if statement is a nested for loop, if it is, throw an error
+    if (refreshedRegex(regexForLoopFor).test(statement + ' {% endfor %}')) {
+        throw new Error('Nested for loops are not supported');
+    }
+
+    if (!Array.isArray(scope[collectionName])) {
+        throw new Error(`The collection ${collectionName} is not an array. It's a ${typeof scope[collectionName]} (in ${transformer.getPath()})}`);
+    }
 
     return [
         itemName,
@@ -114,7 +119,8 @@ addDefaultTransform('for', /\{%\s*for\s+(\w+)\s+in\s+(\w+)\s*%\}(.*?)\{%\s*endfo
  * Variable
  */
 // `{{ VARIABLE }}`
-addDefaultTransform('variable', /{{\s*(\w+(?:\[[^\]]*\])*)?\s*}}/g);
+export const regexForVariable = /{{\s*(\w+(?:\[[^\]]*?\])*)?\s*}}/g;
+addDefaultTransform('variable', regexForVariable);
 
 /**
  * If-statement
@@ -122,7 +128,8 @@ addDefaultTransform('variable', /{{\s*(\w+(?:\[[^\]]*\])*)?\s*}}/g);
 // `{% if VARIABLE OPERATOR 'VALUE' %}`
 // `{% if VARIABLE OPERATOR "VALUE" %}`
 // `{% if VARIABLE %}`
-addDefaultTransform('if', /{%\s*if\s*(\w+)\s+(?:(\S+)\s*((?:'[^']+)'|"(?:[^']+)"))*?\s*%}/g, (transformer, name, op, value) => {
+export const regexForIf = /{%\s*if\s*(\w+)\s+(?:(\S+)\s*((?:'[^']+?)'|"(?:[^']+?)"))*?\s*%}/g;
+addDefaultTransform('if', regexForIf, (transformer, name, op, value) => {
     if (op && value) {
         value = value.slice(1, -1); // trim quotes
         return [
@@ -142,7 +149,8 @@ addDefaultTransform('if', /{%\s*if\s*(\w+)\s+(?:(\S+)\s*((?:'[^']+)'|"(?:[^']+)"
 // `{% elsif VARIABLE OPERATOR 'VALUE' %}`
 // `{% elsif VARIABLE OPERATOR "VALUE" %}`
 // `{% elsif VARIABLE %}`
-addDefaultTransform('elsif', /{%\s*elsif\s*(\w+)\s+(?:(\S+)\s*((?:'[^']+)'|"(?:[^']+)"))*?\s*%}/g, (transformer, name, op, value) => {
+export const regexForIfElseIf = /{%\s*elsif\s*?(\w+)\s*?(?:(\S+)\s*((?:'[^']+?)'|"(?:[^']+?)"))*?\s*%}/g;
+addDefaultTransform('elsif', regexForIfElseIf, (transformer, name, op, value) => {
     if (op && value) {
         value = value.slice(1, -1); // trim quotes
         return [
@@ -160,17 +168,21 @@ addDefaultTransform('elsif', /{%\s*elsif\s*(\w+)\s+(?:(\S+)\s*((?:'[^']+)'|"(?:[
 });
 
 // `{% else %}`
-addDefaultTransform('else', /{%\s*else\s*%}/g);
+export const regexForIfElse = /{%\s*else\s*%}/g;
+addDefaultTransform('else', regexForIfElse);
 // `{% endif %}`
-addDefaultTransform('endif', /{%\s*endif\s*%}/g);
+export const regexForIfEnd = /{%\s*endif\s*%}/g;
+addDefaultTransform('endif', regexForIfEnd);
 
 /**
  * Unless-statement
  */
 // `{% unless VARIABLE %}`
-addDefaultTransform('unless', /{%\s*unless\s*(\w+)\s*%}/g);
+export const regexForUnless = /{%\s*unless\s*(\w+)\s*%}/g;
+addDefaultTransform('unless', regexForUnless);
 // `{% endunless %}`
-addDefaultTransform('endunless', /{%\s*endunless\s*%}/g);
+export const regexForUnlessEnd = /{%\s*endunless\s*%}/g;
+addDefaultTransform('endunless', regexForUnlessEnd);
 
 /**
  * @public

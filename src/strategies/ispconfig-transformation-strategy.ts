@@ -76,7 +76,12 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
             path
         });
 
-        return this.transformer.transform(contents);
+        const transformed = this.transformer.transform(contents);
+
+        // Clean up the scope after processing a block/component
+        this.transformer.popScope();
+
+        return transformed;
     }
 
     /**
@@ -86,11 +91,6 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
         const scope = this.transformer.getScope();
 
         if (!Array.isArray(scope[collectionName])) {
-            if (scope[collectionName] === undefined) {
-                // This will happen when vite transforms the file.
-                return '';
-            }
-
             throw new Error(`The collection ${collectionName} is not an array. It's a ${typeof scope[collectionName]} (in ${this.transformer.getPath()})}`);
         }
 
@@ -103,7 +103,12 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
 
             this.transformer.pushToScope(variables);
 
-            return this.transformer.transform(statement);
+            const transformed = this.transformer.transform(statement);
+
+            // Clean up the scope after processing a block/component
+            this.transformer.popScope();
+
+            return transformed;
         }).join('');
     }
 

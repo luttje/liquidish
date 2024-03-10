@@ -55,6 +55,10 @@ export class LiquidishTransformer {
         this.basePath = null;
     }
 
+    public getStrategy(): AbstractTransformationStrategy {
+        return this.strategy;
+    }
+
     /**
      * Create a new scope object and push it onto the stack
      */
@@ -156,9 +160,6 @@ export class LiquidishTransformer {
                 });
             }
         }
-
-        // Clean up the scope after processing a block/component
-        this.popScope();
 
         return contents;
     }

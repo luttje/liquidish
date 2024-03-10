@@ -162,6 +162,12 @@ describe('ISPConfig Transformation Strategy', () => {
         const transformed = getISPConfigTransform(`{% comment %}\nThis is a comment\nwith multiple lines\n{% endcomment %}`);
         expect(transformed).toBe('');
     });
+
+    it('should throw an error when a nested for loop is detected', () => {
+        expect(
+            () => getISPConfigTransform(`{% render './render-nested-for-loops', { "items": [1, 2, 3], "subitems": [4,5,6] } %}`, resolve(fixturesPath, 'render-nested-for-loops.liquid'))
+        ).toThrowError('Nested for loops are not supported');
+    });
 });
 
 describe('ISPConfig Transformation Strategy (customized)', () => {

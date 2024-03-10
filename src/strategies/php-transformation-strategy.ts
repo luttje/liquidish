@@ -54,11 +54,6 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
         const scope = this.transformer.getScope();
 
         if (!Array.isArray(scope[collectionName])) {
-            if (scope[collectionName] === undefined) {
-                // This will happen when vite transforms the file.
-                return '';
-            }
-
             throw new Error(`The collection ${collectionName} is not an array. It's a ${typeof scope[collectionName]} (in ${this.transformer.getPath()})}`);
         }
 

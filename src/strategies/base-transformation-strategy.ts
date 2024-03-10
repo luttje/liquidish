@@ -128,7 +128,7 @@ addDefaultTransform('variable', regexForVariable);
 // `{% if VARIABLE OPERATOR 'VALUE' %}`
 // `{% if VARIABLE OPERATOR "VALUE" %}`
 // `{% if VARIABLE %}`
-export const regexForIf = /{%\s*if\s*(\w+)\s+(?:(\S+)\s*((?:'[^']+?)'|"(?:[^']+?)"))*?\s*%}/g;
+export const regexForIf = /{%\s*if\s*(\w+)\s+(?:(\S+)\s*((?:'[^']*?)'|"(?:[^']*?)"))*?\s*%}/g;
 addDefaultTransform('if', regexForIf, (transformer, name, op, value) => {
     if (op && value) {
         value = value.slice(1, -1); // trim quotes
@@ -149,7 +149,7 @@ addDefaultTransform('if', regexForIf, (transformer, name, op, value) => {
 // `{% elsif VARIABLE OPERATOR 'VALUE' %}`
 // `{% elsif VARIABLE OPERATOR "VALUE" %}`
 // `{% elsif VARIABLE %}`
-export const regexForIfElseIf = /{%\s*elsif\s*?(\w+)\s*?(?:(\S+)\s*((?:'[^']+?)'|"(?:[^']+?)"))*?\s*%}/g;
+export const regexForIfElseIf = /{%\s*elsif\s*?(\w+)\s*?(?:(\S+)\s*((?:'[^']*?)'|"(?:[^']*?)"))*?\s*%}/g;
 addDefaultTransform('elsif', regexForIfElseIf, (transformer, name, op, value) => {
     if (op && value) {
         value = value.slice(1, -1); // trim quotes

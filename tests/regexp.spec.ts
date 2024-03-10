@@ -134,6 +134,10 @@ describe('RegExp Tests for if', () => {
         assertMatchCount(regexForIf, '{% if VARIABLE OPERATOR "VALUE" %} {% if VARIABLE OPERATOR "VALUE" %} {% endif %} {% endif %}', 2);
         assertMatchFrom(regexForIf, '{% if VARIABLE OPERATOR "VALUE" %} {% if VARIABLE OPERATOR "VALUE" %} {% endif %} {% endif %}', 0, '{% if VARIABLE OPERATOR "VALUE" %}'.length);
 
+        // Matches with empty value
+        assertMatch(regexForIf, '{% if VARIABLE OPERATOR "" %} {% endif %}');
+        assertMatch(regexForIf, `{% if VARIABLE OPERATOR '' %} {% endif %}`);
+
         // Try with some weird or missing spaces
         assertMatch(regexForIf, '{%if VARIABLE OPERATOR "VALUE" %} {% endif %}');
         assertMatch(regexForIf, '{% ifVARIABLE OPERATOR "VALUE" %} {% endif %}');
@@ -215,6 +219,10 @@ describe('RegExp Tests for if-elseif', () => {
         assertMatch(regexForIfElseIf, '{% elsif VARIABLE %} {% elsif VARIABLE %}');
         assertMatchCount(regexForIfElseIf, '{% elsif VARIABLE %}', 1);
         assertMatchCount(regexForIfElseIf, '{% elsif VARIABLE %} {% elsif VARIABLE %}', 2);
+
+        // Matches with empty value
+        assertMatch(regexForIfElseIf, '{% elsif VARIABLE OPERATOR "" %} {% endif %}');
+        assertMatch(regexForIfElseIf, `{% elsif VARIABLE OPERATOR '' %} {% endif %}`);
 
         // Try with some weird or missing spaces
         assertMatch(regexForIfElseIf, '{%elsif VARIABLE%}');

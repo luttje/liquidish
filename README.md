@@ -38,8 +38,8 @@ npm init vite@latest
     import { resolve } from 'path';
     import { defineConfig } from 'vite';
     import { viteStaticCopy } from 'vite-plugin-static-copy';
-    import { LiquidishTransformer } from 'liquidish';
     import { ISPConfigTransformationStrategy } from 'liquidish/strategies';
+    import { LiquidishTransformer } from 'liquidish';
 
     // Where the `.liquid` files are located
     const srcTemplatesPath = 'src/templates';
@@ -57,23 +57,23 @@ npm init vite@latest
 
       plugins: [
         viteStaticCopy({
-            targets: [
-              {
-                src: `${srcTemplatesPath}/**/*.liquid`,
-                dest: 'templates',
+          targets: [
+            {
+              src: `${srcTemplatesPath}/**/*.liquid`,
+              dest: 'templates',
 
-                transform: (contents, path) => liquidish.transform(contents, path),
+              transform: (contents, path) => liquidish.transform(contents, path),
 
-                rename: function (name, ext, fullPath) {
-                  const path = fullPath.replace(resolve(__dirname, srcTemplatesPath), '');
+              rename: function (name, ext, fullPath) {
+                const path = fullPath.replace(resolve(__dirname, srcTemplatesPath), '');
 
-                  // Rename the extension to what you want.
-                  // In our case ISPConfig expects `.htm` files
-                  return path.replace(/\.liquid$/, '.htm');
-                },
+                // Rename the extension to what you want.
+                // In our case ISPConfig expects `.htm` files
+                return path.replace(/\.liquid$/, '.htm');
               },
-            ],
-          }),
+            },
+          ],
+        }),
       ],
     });
     ```

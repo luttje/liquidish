@@ -2,3 +2,4 @@ node_modules/
 liquidish/actual
 dist/
 *.log
+coverage/

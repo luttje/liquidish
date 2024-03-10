@@ -1,0 +1,6 @@
+<button class="{% for class in classes %}{{ class }} {% endfor %}"
+        {% for attribute in attributes %}
+        {{ attribute[0] }}="{{ attribute[1] }}"
+        {% endfor %}>
+        {{ slot }}
+</button>

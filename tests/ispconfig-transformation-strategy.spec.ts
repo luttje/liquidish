@@ -29,14 +29,6 @@ describe('ISPConfig Transformation Strategy', () => {
         expect(transformed2).toBe('{tmpl_if name="VARIABLE" op="OPERATOR" value="VALUE"}');
     });
 
-    // TODO: Figure out whats wrong with this weird test (hangs forever, but only with parts of the code) :/
-    // it('should transform nested if statements', () => {
-    //     const transformed = getISPConfigTransform(`{% render "render-nested-if.liquid" %}`, resolve(fixturesPath, 'render-nested-if.liquid'));
-    //     const expected = readFixtureFile('render-nested-if.ispconfig.expected.htm');
-
-    //     expect(transformed).toBe(expected);
-    // });
-
     it('should transform elsif statements', () => {
         const transformed = getISPConfigTransform(`{% elsif VARIABLE %}`);
         expect(transformed).toBe('{tmpl_elseif name="VARIABLE"}');

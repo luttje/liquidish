@@ -48,7 +48,7 @@ addDefaultTransform('comment', /{%\s*comment\s*%}([\s\S]*?){%\s*endcomment\s*%}/
 //     ]
 // }
 // NOTE: For simplicty sake the JSON cannot contain %}
-addDefaultTransform('render', /{%\s*render\s*((?:'[^']+?)'|"(?:[^']+?)"){1}(?:\s*,\s*((?:[^%]+|%(?!}))*))*\s*%}/g, (transformer, component, variablesString) => {
+addDefaultTransform('render', /{%\s*render\s*((?:'[^']+?)'|"(?:[^']+?)"){1}(?:\s*,\s*((?:[^%]+|%(?!}))*))*?\s*%}/g, (transformer, component, variablesString) => {
     const variables = {};
 
     if (variablesString) {
@@ -122,7 +122,7 @@ addDefaultTransform('variable', /{{\s*(\w+(?:\[[^\]]*\])*)?\s*}}/g);
 // `{% if VARIABLE OPERATOR 'VALUE' %}`
 // `{% if VARIABLE OPERATOR "VALUE" %}`
 // `{% if VARIABLE %}`
-addDefaultTransform('if', /{%\s*if\s*(\w+)\s+(?:(\S+)\s*((?:'[^']+)'|"(?:[^']+)"))*\s*%}/g, (transformer, name, op, value) => {
+addDefaultTransform('if', /{%\s*if\s*(\w+)\s+(?:(\S+)\s*((?:'[^']+)'|"(?:[^']+)"))*?\s*%}/g, (transformer, name, op, value) => {
     if (op && value) {
         value = value.slice(1, -1); // trim quotes
         return [
@@ -142,7 +142,7 @@ addDefaultTransform('if', /{%\s*if\s*(\w+)\s+(?:(\S+)\s*((?:'[^']+)'|"(?:[^']+)"
 // `{% elsif VARIABLE OPERATOR 'VALUE' %}`
 // `{% elsif VARIABLE OPERATOR "VALUE" %}`
 // `{% elsif VARIABLE %}`
-addDefaultTransform('elsif', /{%\s*elsif\s*(\w+)\s+(?:(\S+)\s*((?:'[^']+)'|"(?:[^']+)"))*\s*%}/g, (transformer, name, op, value) => {
+addDefaultTransform('elsif', /{%\s*elsif\s*(\w+)\s+(?:(\S+)\s*((?:'[^']+)'|"(?:[^']+)"))*?\s*%}/g, (transformer, name, op, value) => {
     if (op && value) {
         value = value.slice(1, -1); // trim quotes
         return [

@@ -147,26 +147,13 @@ export class LiquidishTransformer {
         }
 
         for (const { strategyMethodName, regex, parseFunction } of this.transformRegexes) {
-            if (Array.isArray(regex)) {
-                for (const r of regex) {
-                    if (contents.match(r)) {
-                        contents = this.transformContents({
-                            contents,
-                            regex: r,
-                            strategyMethodName,
-                            parseFunction,
-                        });
-                    }
-                }
-            } else {
-                if (contents.match(regex)) {
-                    contents = this.transformContents({
-                        contents,
-                        regex,
-                        strategyMethodName,
-                        parseFunction,
-                    });
-                }
+            if (contents.match(regex)) {
+                contents = this.transformContents({
+                    contents,
+                    regex,
+                    strategyMethodName,
+                    parseFunction,
+                });
             }
         }
 

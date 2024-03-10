@@ -1,8 +1,12 @@
 # 💧 `Liquidish`
 
-This variant of Liquid was created to compile Liquid-like syntax to another templating language. Originally, it was created to compile to ISPConfig's `tpl` syntax.
+[![tests](https://github.com/luttje/liquidish/actions/workflows/tests.yml/badge.svg)](https://github.com/luttje/liquidish/actions/workflows/tests.yml)
+[![Coverage Status](https://coveralls.io/repos/github/luttje/liquidish/badge.svg?branch=main)](https://coveralls.io/github/luttje/liquidish?branch=main)
+[![npm](https://img.shields.io/npm/v/liquidish)](https://www.npmjs.com/package/liquidish)
 
-Liquidish is designed to work with Vite, but it can be used with any build tool that allows transforming files (e.g: Webpack and Rollup).
+This variant of [Liquid](https://shopify.github.io/liquid/) was created to compile Liquid-like syntax to another templating language. It was created to compile to ISPConfig's `tpl` syntax, seeing how it does not have proper IDE support and is not as flexible as Liquid.
+
+Liquidish is designed to work with [Vite](https://vitejs.dev/), but it can be used with any build tool that allows transforming files *(e.g: Webpack and Rollup)*.
 
 > [!WARNING]
 > This is a work in progress. It's not finished yet.
@@ -12,11 +16,13 @@ Liquidish is designed to work with Vite, but it can be used with any build tool 
 
 We'll assume you have a Vite project set up. If not, you can create one with `npm init vite@latest`.
 
-1. Install this package in your project:
+1. Install [this package](https://www.npmjs.com/package/liquidish) in your project:
 
     ```bash
-    npm install luttje/liquidish
+    npm i -D liquidish
     ```
+
+    *Seeing how you will be using this in your bundler, you should likely install it as a dev dependency.*
 
 2. Create a bunch of `.liquid` files you want to compile, e.g: `src/templates`.
 
@@ -25,7 +31,7 @@ We'll assume you have a Vite project set up. If not, you can create one with `np
 3. We use the [`vite-plugin-static-copy`](https://www.npmjs.com/package/vite-plugin-static-copy) to copy the `.liquid` files to the `templates` directory. Install it with:
 
     ```bash
-    npm install vite-plugin-static-copy
+    npm i -D vite-plugin-static-copy
     ```
 
 4. Modify your `vite.config.js` to include the Liquidish transformer:

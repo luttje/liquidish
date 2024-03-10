@@ -10,19 +10,15 @@ Liquidish is designed to work with Vite, but it can be used with any build tool 
 
 ## 🚀 Using Liquidish
 
-We'll assume you have a Vite project set up. If not, you can create one with:
+We'll assume you have a Vite project set up. If not, you can create one with `npm init vite@latest`.
 
-```bash
-npm init vite@latest
-```
-
-1. Install the package:
+1. Install this package in your project:
 
     ```bash
     npm install luttje/liquidish
     ```
 
-2. Create a bunch of `.liquid` files in a directory, e.g: `src/templates`.
+2. Create a bunch of `.liquid` files you want to compile, e.g: `src/templates`.
 
     > See the [📚 Liquidish Syntax](#-liquidish-syntax) for the syntax.
 
@@ -51,10 +47,7 @@ npm init vite@latest
     });
 
     export default defineConfig({
-      build: {
-        // ...
-      },
-
+      // ...
       plugins: [
         viteStaticCopy({
           targets: [

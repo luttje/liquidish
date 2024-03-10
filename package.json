@@ -1,13 +1,14 @@
 {
   "name": "liquidish",
-  "description": "Transpile liquid-like templates to *anything*",
+  "description": "Compile liquid-like templates to *anything*",
   "author": "Luttje",
   "version": "0.1.0",
   "type": "module",
   "keywords": [
     "liquid",
     "template",
-    "transpiler"
+    "templating",
+    "ispconfig"
   ],
   "license": "MIT",
   "files": [

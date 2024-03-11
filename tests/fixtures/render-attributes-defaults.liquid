@@ -6,7 +6,8 @@
         "complex": {
             "human": {
                 "name": "Anne",
-                "age": 25
+                "age": 25,
+                "isOnline": false
             }
         }
     }
@@ -15,8 +16,12 @@
         {{ attributes }}>
     {{ slot }}{% if slot == 'Button' %}!{% endif %}
 
-    {% if complex.human.name %}
+    {% if complex.human %}
         <span>Welcome</span>
+    {% endif %}
+
+    {% if complex.human.isOnline %}
+        <span>Online</span>
     {% endif %}
 
     {% if complex.human.name == 'Anne' %}

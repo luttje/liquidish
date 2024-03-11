@@ -30,6 +30,19 @@ export function escapeRegExp(string) {
 }
 
 /**
+ * Checks if a string is a numeric string.
+ *
+ * @internal
+ */
+export function isNumericString(value: any): boolean {
+    if (typeof value !== 'string') {
+        return false;
+    }
+
+    return !isNaN(Number(value)) && value.trim() !== '';
+}
+
+/**
  * Counts the indentation until the start of the line
  * before the provided offset.
  *

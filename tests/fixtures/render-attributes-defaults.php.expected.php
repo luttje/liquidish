@@ -7,6 +7,10 @@
         <span>Welcome</span>
     <?php endif; ?>
 
+    <?php if (false) : ?>
+        <span>Online</span>
+    <?php endif; ?>
+
     <?php if (true) : ?>
         <span>Anne</span>
     <?php endif; ?>

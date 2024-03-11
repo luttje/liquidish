@@ -1,6 +1,6 @@
 import { CancellationRequestedError } from "../transformer/cancellation-requested-error.js";
 import { TransformParser } from "../transformer/parser.js";
-import { buildVariablesScope, refreshedRegex } from "../utils.js";
+import { buildVariablesScope, isNumericString, refreshedRegex } from "../utils.js";
 import { AbstractTransformationStrategy, MetaData } from "./abstract-transformation-strategy.js";
 
 export type Transformation = {
@@ -259,21 +259,60 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
         return '';
     }
 
-    protected performIf(actual: string, op: string, expected: string): boolean {
+    protected performIf(actual: any, op: string, expected: string): boolean {
+        const isTruthy = (value: any) => {
+            if (value === undefined || value === null) {
+                return false;
+            }
+
+            if (typeof value === 'string') {
+                return value.length > 0;
+            } else if (typeof value === 'number') {
+                return value !== 0;
+            } else if (typeof value === 'boolean') {
+                return value;
+            } else if (Array.isArray(value)) {
+                return value.length > 0;
+            } else if (typeof value === 'object' && value !== null) {
+                return true;
+            }
+
+            return false;
+        }
+
         switch (op) {
             case undefined:
-                return actual != undefined;
+                return isTruthy(actual);
             case '==':
+                // If both are numeric strings or one is a numeric string and the other is a number, compare as numbers
+                if (isNumericString(actual) && isNumericString(expected)) {
+                    return Number(actual) == Number(expected);
+                }
                 return actual == expected;
             case '!=':
+                if (isNumericString(actual) && isNumericString(expected)) {
+                    return Number(actual) != Number(expected);
+                }
                 return actual != expected;
             case '>':
+                if (isNumericString(actual) && isNumericString(expected)) {
+                    return Number(actual) > Number(expected);
+                }
                 return actual > expected;
             case '<':
+                if (isNumericString(actual) && isNumericString(expected)) {
+                    return Number(actual) < Number(expected);
+                }
                 return actual < expected;
             case '>=':
+                if (isNumericString(actual) && isNumericString(expected)) {
+                    return Number(actual) >= Number(expected);
+                }
                 return actual >= expected;
             case '<=':
+                if (isNumericString(actual) && isNumericString(expected)) {
+                    return Number(actual) <= Number(expected);
+                }
                 return actual <= expected;
             default:
                 throw new Error(`Invalid operator: ${op}`);

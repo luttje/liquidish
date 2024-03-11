@@ -28,6 +28,23 @@ function addDefaultTransform(strategyMethodName, regex, parseFunction = null) {
 }
 
 /**
+ * Prevent users from using reserved keywords
+ */
+function sanityCheckReservedKeywords(variables: Record<string, any>) {
+    for (const key of Object.keys(variables)) {
+        if (key !== '___') {
+            continue;
+        }
+
+        const value = variables[key];
+
+        if (value === 'dont-show-it' || value === 'show-it') {
+            throw new Error('The variable name "___" with the value "dont-show-it" or "show-it" is reserved');
+        }
+    }
+}
+
+/**
  *
  * Available transformations:
  *
@@ -57,6 +74,8 @@ addDefaultTransform('meta', regexForMeta, (transformer, metaString) => {
         throw new Error(`Invalid JSON in meta tag: ${metaString}`);
     }
 
+    sanityCheckReservedKeywords(meta.defaults);
+
     return [
         meta,
     ];
@@ -83,6 +102,8 @@ addDefaultTransform('render', regexForRender, (transformer, component, variables
         // Try parse it as JSON
         try {
             const parsed = JSON.parse(variablesString);
+
+            sanityCheckReservedKeywords(parsed);
 
             if (typeof parsed === 'object') {
                 for (const [key, value] of Object.entries(parsed)) {

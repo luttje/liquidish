@@ -4,6 +4,10 @@
     Button<?php if (true) : ?>!<?php endif; ?>
 
     <?php if (true) : ?>
+        <span>Welcome</span>
+    <?php endif; ?>
+
+    <?php if (true) : ?>
         <span>Anne</span>
     <?php endif; ?>
     <?php if (false) : ?>

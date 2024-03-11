@@ -240,6 +240,8 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
 
     protected performIf(actual: string, op: string, expected: string): boolean {
         switch (op) {
+            case undefined:
+                return actual != undefined;
             case '==':
                 return actual == expected;
             case '!=':

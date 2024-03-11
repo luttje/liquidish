@@ -15,6 +15,10 @@
         {{ attributes }}>
     {{ slot }}{% if slot == 'Button' %}!{% endif %}
 
+    {% if complex.human.name %}
+        <span>Welcome</span>
+    {% endif %}
+
     {% if complex.human.name == 'Anne' %}
         <span>{{ complex.human.name }}</span>
     {% endif %}

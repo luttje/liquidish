@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { resolve } from 'path';
 import { fixturesPath, readFixtureFile } from './test-utils';
-import { LiquidishTransformer } from '../src/transformer';
+import { LiquidishTransformer } from '../src/transformer/transformer';
 import { PHPTransformationStrategy } from '../src/strategies/php-transformation-strategy';
 
 function getPHPConfigTransform(contents: string, path?: string) {

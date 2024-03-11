@@ -1,3 +1,3 @@
-import { LiquidishTransformer } from "./transformer.js";
+import { LiquidishTransformer } from "./transformer/transformer.js";
 
 export { LiquidishTransformer };

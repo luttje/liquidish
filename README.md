@@ -251,6 +251,25 @@ This will be compiled to:
 <button class="px-4 py-2" id="click-me" data-load-content="click.php">Click me</button>
 ```
 
+### Metadata
+
+You can provide metadata to the transformer by using the `meta` tag. This can be used to ignore component files, who only work when called with `render` and provided their parameters.
+
+Additionally you can provide default parameters for the component, which will be used when the component is called without parameters.
+
+```liquid
+{% meta {
+  "isChildOnly": true,
+  "defaults": {
+    "parameter": "value"
+  }
+} %}
+```
+
+The data provided must be a valid JSON object. The meta tag must be the first element in the file.
+
+The `isChildOnly` key can be used for sub-templates. When the transformer runs into a file with `isChildOnly` set to `true`, it will not compile it to a separate file. Instead, it can only be included in the parent file using the `render` tag.
+
 ### Other syntax
 
 Transformations can be added to Liquidish by using transformation strategies like those provided in the [🗺 Transformation Strategies](#-transformation-strategies) section.

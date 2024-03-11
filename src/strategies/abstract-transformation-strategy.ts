@@ -1,5 +1,11 @@
-import { LiquidishTransformer } from "../transformer.js";
+import { LiquidishTransformer } from "../transformer/transformer.js";
 import { Transformation } from "./base-transformation-strategy.js";
+
+export type MetaData = {
+    isChildOnly?: boolean;
+    defaults?: Record<string, any>;
+    [key: string]: any;
+};
 
 /**
  * Base class for transformation strategies.
@@ -14,6 +20,8 @@ export abstract class AbstractTransformationStrategy {
     }
 
     public abstract getTransformations(): Transformation[];
+
+    public abstract meta(meta: MetaData): string;
 
     public abstract comment(comment: string): string;
 

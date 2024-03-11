@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { resolve } from 'path';
 import { fixturesPath, readFixtureFile } from './test-utils';
-import { LiquidishTransformer } from '../src/transformer';
+import { LiquidishTransformer } from '../src/transformer/transformer';
 import { ISPConfigTransformationStrategy } from '../src/strategies/ispconfig-transformation-strategy';
 
 function getISPConfigTransform(contents: string, path?: string) {
@@ -128,6 +128,19 @@ describe('ISPConfig Transformation Strategy', () => {
 
         expect(transformed1).toBe(expected);
         expect(transformed2).toBe(expected);
+    });
+
+    it('should transform render statements using default parameters in metadata', () => {
+        const transformed = getISPConfigTransform(`{% render './render-attributes-component.liquid' %}`, resolve(fixturesPath, 'render-attributes.liquid'));
+        const expected = readFixtureFile('render-attributes-defaults.ispconfig.expected.htm');
+
+        expect(transformed).toBe(expected);
+    });
+
+    it('should not render components that have isChildOnly set to true', () => {
+        const transformed1 = getISPConfigTransform(readFixtureFile('render-attributes-component.liquid'), resolve(fixturesPath, 'render-attributes-component.liquid'));
+
+        expect(transformed1).toBeNull();
     });
 
     it('should render variables that contain quotes correctly', () => {

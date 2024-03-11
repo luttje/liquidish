@@ -1,7 +1,8 @@
-import { AbstractTransformationStrategy } from "./strategies/abstract-transformation-strategy.js";
-import { Transformation } from "./strategies/base-transformation-strategy.js";
-import { TransformParser } from "./transformer/parser.js";
-import { StrategyBuilder } from "./transformer/strategy-builder.js";
+import { AbstractTransformationStrategy } from "../strategies/abstract-transformation-strategy.js";
+import { Transformation } from "../strategies/base-transformation-strategy.js";
+import { TransformParser } from "./parser.js";
+import { StrategyBuilder } from "./strategy-builder.js";
+import { CancellationRequestedError } from './cancellation-requested-error.js';
 
 export type LiquidishTransformerOptions = {
     strategyBuilder?: StrategyBuilder;
@@ -108,22 +109,30 @@ export class LiquidishTransformer {
     /**
      * Transform the provided contents using the given strategy.
      */
-    transformContents({ contents, regex, strategyMethodName, parseFunction }: TransformContentsOptions): string {
+    transformContents({ contents, regex, strategyMethodName, parseFunction }: TransformContentsOptions): string | null {
         const transformer = this;
 
-        if (parseFunction) {
-            contents = contents.replace(regex, function (match, ...args) {
-                const parsed = parseFunction(transformer, ...args);
+        try {
+            if (parseFunction) {
+                contents = contents.replace(regex, function (match, ...args) {
+                    const parsed = parseFunction(transformer, ...args);
 
-                // append the offset and the string to the parsed array
-                parsed.push(args[args.length - 2], args[args.length - 1]);
+                    // append the offset and the string to the parsed array
+                    parsed.push(args[args.length - 2], args[args.length - 1]);
 
-                return transformer.strategy[strategyMethodName](...parsed);
-            });
-        } else {
-            contents = contents.replace(regex, function (match, ...args) {
-                return transformer.strategy[strategyMethodName](...args);
-            });
+                    return transformer.strategy[strategyMethodName](...parsed);
+                });
+            } else {
+                contents = contents.replace(regex, function (match, ...args) {
+                    return transformer.strategy[strategyMethodName](...args);
+                });
+            }
+        } catch (e) {
+            if (e instanceof CancellationRequestedError) {
+                return null;
+            }
+
+            throw e;
         }
 
         return contents;
@@ -143,6 +152,14 @@ export class LiquidishTransformer {
     }
 
     /**
+     * Returns whether the transformer is currently transforming the root file
+     * and not a child file.
+     */
+    isRoot(): boolean {
+        return this.basePath === this.getPath();
+    }
+
+    /**
      * Transforms the provided contents to the format provided by the strategy.
      */
     transform(contents: string, path?: string): string {
@@ -158,6 +175,12 @@ export class LiquidishTransformer {
                     strategyMethodName,
                     parseFunction,
                 });
+
+                // In situations where the transformation is cancelled, we return null
+                // to not output anything.
+                if (contents === null) {
+                    return null;
+                }
             }
         }
 

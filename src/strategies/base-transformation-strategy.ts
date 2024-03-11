@@ -1,6 +1,7 @@
+import { CancellationRequestedError } from "../transformer/cancellation-requested-error.js";
 import { TransformParser } from "../transformer/parser.js";
 import { refreshedRegex } from "../utils.js";
-import { AbstractTransformationStrategy } from "./abstract-transformation-strategy.js";
+import { AbstractTransformationStrategy, MetaData } from "./abstract-transformation-strategy.js";
 
 export type Transformation = {
     regex: RegExp;
@@ -39,6 +40,27 @@ function addDefaultTransform(strategyMethodName, regex, parseFunction = null) {
 // {% comment %}\nThis is a comment\nwith multiple lines\n{% endcomment %}
 export const regexForComment = /{%\s*comment\s*%}([\s\S]*?){%\s*endcomment\s*%}/g;
 addDefaultTransform('comment', regexForComment);
+
+// {% meta {
+//   "isChildOnly": true,
+//   "defaults": {
+//     "parameter": "value"
+//   }
+// } %}
+export const regexForMeta = /{%\s*meta\s*?(?:\s*\s*((?:[^%]+?|%(?!}))*))*?\s*%}/g;
+addDefaultTransform('meta', regexForMeta, (transformer, metaString) => {
+    let meta: MetaData = {};
+
+    try {
+        meta = JSON.parse(metaString);
+    } catch (e) {
+        throw new Error(`Invalid JSON in meta tag: ${metaString}`);
+    }
+
+    return [
+        meta,
+    ];
+});
 
 // {% render 'COMPONENT' %}
 // {% render 'COMPONENT', variable: 'value', another: 'value' %}
@@ -193,5 +215,26 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
      */
     override getTransformations(): Transformation[] {
         return defaultTransformations;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    override meta(meta: MetaData): string {
+        if (meta.isChildOnly && this.transformer.isRoot()) {
+            throw new CancellationRequestedError();
+        }
+
+        // We check the entire scope, and place the default values in the current scope (so they get popped off when the file is done)
+        var scope = this.transformer.getScope();
+        var currentScope = this.transformer.peekScope();
+
+        for (const [key, value] of Object.entries(meta.defaults || {})) {
+            if (scope[key] === undefined) {
+                currentScope[key] = value;
+            }
+        }
+
+        return '';
     }
 }

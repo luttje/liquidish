@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+    regexForMeta,
     regexForComment,
     regexForVariable,
     regexForIf,
@@ -13,6 +14,22 @@ import {
     regexForVariableString,
 } from '../src/strategies/base-transformation-strategy';
 import { CHARS_QUOTES, CHARS_WHITESPACE, assertMatch, assertMatchCount, assertMatchFrom, fuzz, fuzzWithCharacters } from './test-utils';
+
+describe('RegExp Tests for meta', () => {
+    it('meta regex should match meta', () => {
+        const metaJson = {
+            isChildOnly: true,
+            defaults: {
+                parameter: 'value',
+            },
+        };
+        assertMatch(regexForMeta, `{% meta ${JSON.stringify(metaJson)} %}`);
+        assertMatchCount(regexForMeta, `{% meta ${JSON.stringify(metaJson)} %}`, 1);
+        assertMatchCount(regexForMeta, `{% meta ${JSON.stringify(metaJson, null, 2)} %}`, 1);
+
+        assertMatchCount(regexForMeta, `{% meta {} %}`, 1);
+    });
+});
 
 describe('RegExp Tests for comments', () => {
     it('comment regex should match comments', () => {

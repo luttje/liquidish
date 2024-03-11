@@ -67,10 +67,34 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
         }).join('');
     }
 
+    private compileKnownIf(name: string, op: string, value: string, keyword = 'if ('): string | null {
+        const scope = this.transformer.getScope();
+
+        // If the variable is defined in the current scope, use it
+        if (scope[name] !== undefined) {
+            // TODO: Find a better way to show/hide the content.
+            // This was easiest, since if we remove the if, we also have to find which
+            // else /endif to remove. Or which statements belong to the if.
+            if (this.performIf(scope[name], op, value)) {
+                return `<?php ${keyword}true) : ?>`;
+            } else {
+                return `<?php ${keyword}false) : ?>`;
+            }
+        }
+
+        return null;
+    }
+
     /**
      * @inheritdoc
      */
     override if(name: string, op: string, value: string): string {
+        const knownIf = this.compileKnownIf(name, op, value);
+
+        if (knownIf !== null) {
+            return knownIf;
+        }
+
         if (op && value) {
             return `<?php if ($${name} ${op} '${value}') : ?>`;
         }
@@ -82,6 +106,12 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
      * @inheritdoc
      */
     override elsif(name: string, op: string, value: string): string {
+        const knownIf = this.compileKnownIf(name, op, value, 'elseif (');
+
+        if (knownIf !== null) {
+            return knownIf;
+        }
+
         if (op && value) {
             return `<?php elseif ($${name} ${op} '${value}') : ?>`;
         }
@@ -107,6 +137,12 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
      * @inheritdoc
      */
     override unless(name: string): string {
+        const knownIf = this.compileKnownIf(name, '!=', 'true', 'if (!');
+
+        if (knownIf !== null) {
+            return knownIf;
+        }
+
         return `<?php if (!$${name}) : ?>`;
     }
 

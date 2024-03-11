@@ -113,6 +113,13 @@ describe('PHP Transformation Strategy', () => {
         expect(transformed2).toBe(expected);
     });
 
+    it('should transform render statements using default parameters in metadata', () => {
+        const transformed = getPHPConfigTransform(`{% render './render-attributes-defaults.liquid' %}`, resolve(fixturesPath, 'render-attributes.liquid'));
+        const expected = readFixtureFile('render-attributes-defaults.php.expected.php');
+
+        expect(transformed).toBe(expected);
+    });
+
     it('should handle variables with percentage values correctly', () => {
         const transformed = getPHPConfigTransform(`{% render './render-percentage-component.liquid', class: 'w-[8%]' %}`, resolve(fixturesPath, 'render-percentage-component.liquid'));
         const expected = readFixtureFile('render-percentage-component.expected.htm');

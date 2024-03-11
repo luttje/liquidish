@@ -1,6 +1,6 @@
 import { CancellationRequestedError } from "../transformer/cancellation-requested-error.js";
 import { TransformParser } from "../transformer/parser.js";
-import { refreshedRegex } from "../utils.js";
+import { buildVariablesScope, refreshedRegex } from "../utils.js";
 import { AbstractTransformationStrategy, MetaData } from "./abstract-transformation-strategy.js";
 
 export type Transformation = {
@@ -141,7 +141,7 @@ addDefaultTransform('for', regexForLoopFor, (transformer, itemName, collectionNa
  * Variable
  */
 // `{{ VARIABLE }}`
-export const regexForVariable = /{{\s*(\w+(?:\[[^\]]*?\])*)?\s*}}/g;
+export const regexForVariable = /{{\s*([\w\.]+?(?:\[[^\]]*?\])*)?\s*}}/g;
 addDefaultTransform('variable', regexForVariable);
 
 /**
@@ -150,7 +150,7 @@ addDefaultTransform('variable', regexForVariable);
 // `{% if VARIABLE OPERATOR 'VALUE' %}`
 // `{% if VARIABLE OPERATOR "VALUE" %}`
 // `{% if VARIABLE %}`
-export const regexForIf = /{%\s*if\s*(\w+)\s+(?:(\S+)\s*((?:'[^']*?)'|"(?:[^']*?)"))*?\s*%}/g;
+export const regexForIf = /{%\s*if\s*([\w\.]+?)\s+?(?:(\S+)\s*((?:'[^']*?)'|"(?:[^']*?)"))*?\s*%}/g;
 addDefaultTransform('if', regexForIf, (transformer, name, op, value) => {
     if (op && value) {
         value = value.slice(1, -1); // trim quotes
@@ -171,7 +171,7 @@ addDefaultTransform('if', regexForIf, (transformer, name, op, value) => {
 // `{% elsif VARIABLE OPERATOR 'VALUE' %}`
 // `{% elsif VARIABLE OPERATOR "VALUE" %}`
 // `{% elsif VARIABLE %}`
-export const regexForIfElseIf = /{%\s*elsif\s*?(\w+)\s*?(?:(\S+)\s*((?:'[^']*?)'|"(?:[^']*?)"))*?\s*%}/g;
+export const regexForIfElseIf = /{%\s*elsif\s*?([\w\.]+?)\s*?(?:(\S+)\s*((?:'[^']*?)'|"(?:[^']*?)"))*?\s*%}/g;
 addDefaultTransform('elsif', regexForIfElseIf, (transformer, name, op, value) => {
     if (op && value) {
         value = value.slice(1, -1); // trim quotes
@@ -200,10 +200,10 @@ addDefaultTransform('endif', regexForIfEnd);
  * Unless-statement
  */
 // `{% unless VARIABLE %}`
-export const regexForUnless = /{%\s*unless\s*(\w+)\s*%}/g;
+export const regexForUnless = /{%\s*?unless\s*?([\w\.]+?)\s*?%}/g;
 addDefaultTransform('unless', regexForUnless);
 // `{% endunless %}`
-export const regexForUnlessEnd = /{%\s*endunless\s*%}/g;
+export const regexForUnlessEnd = /{%\s*?endunless\s*?%}/g;
 addDefaultTransform('endunless', regexForUnlessEnd);
 
 /**
@@ -231,10 +231,29 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
 
         for (const [key, value] of Object.entries(meta.defaults || {})) {
             if (scope[key] === undefined) {
-                currentScope[key] = value;
+                buildVariablesScope(value, key, currentScope);
             }
         }
 
         return '';
+    }
+
+    protected performIf(actual: string, op: string, expected: string): boolean {
+        switch (op) {
+            case '==':
+                return actual == expected;
+            case '!=':
+                return actual != expected;
+            case '>':
+                return actual > expected;
+            case '<':
+                return actual < expected;
+            case '>=':
+                return actual >= expected;
+            case '<=':
+                return actual <= expected;
+            default:
+                throw new Error(`Invalid operator: ${op}`);
+        }
     }
 }

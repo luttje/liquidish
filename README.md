@@ -112,11 +112,11 @@ Liquidish does not support all of Liquid's features. It is a subset of Liquid, w
 
 Variables are defined with double curly braces: `{{ VARIABLE }}`. They're mostly used to output the value of a variable at runtime.
 
-If variables are known at compile-time (e.g: when using `render` or `for` loops), they will be replaced with their value at compile-time. See the [render](#render) and [for](#for) sections for more information.
-
 ```liquid
 <h1>{{ title }}</h1>
 ```
+
+> 🕒 If variables are known at compile-time (e.g: when using `render` or `for` loops), they will be replaced with their value at compile-time. See the [render](#render) and [for](#for) sections for more information.
 
 ### If-statements
 
@@ -134,6 +134,9 @@ You can also use `!=`, `>`, `<`, `>=`, `<=` as operators for if/elsif statements
 {% endif %}
 ```
 
+> 🕒 If variables are known at compile-time (e.g: when using `render` or `for` loops), if/elsif-statements containing them will be evaluated at compile-time. **This is implemented in a pretty hacky way, so don't expect much of it.**
+> See the [render](#render) and [for](#for) sections for more information.
+
 ### Unless statements
 
 Unless-statements are defined with `{% unless VARIABLE %}` and are the opposite of if-statements. They end with `{% endunless %}`.
@@ -143,6 +146,9 @@ Unless-statements are defined with `{% unless VARIABLE %}` and are the opposite 
     This will be shown if VARIABLE is falsy
 {% endunless %}
 ```
+
+> 🕒 If variables are known at compile-time (e.g: when using `render` or `for` loops), unless-statements containing them will be evaluated at compile-time. **This is implemented in a pretty hacky way, so don't expect much of it.**
+> See the [render](#render) and [for](#for) sections for more information.
 
 ### Comments
 

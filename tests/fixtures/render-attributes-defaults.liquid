@@ -1,0 +1,32 @@
+{% meta {
+    "isChildOnly": true,
+    "defaults": {
+        "attributes": "",
+        "slot": "Button",
+        "complex": {
+            "human": {
+                "name": "Anne",
+                "age": 25
+            }
+        }
+    }
+} %}
+<button class="px-4 py-2 self-start text-sm whitespace-nowrap font-medium text-white bg-[#c70f19] border-bottom-[#980b13] hover:bg-[#df111c] hover:border-bottom-[#800a10] rounded-md shadow uppercase"
+        {{ attributes }}>
+    {{ slot }}{% if slot == 'Button' %}!{% endif %}
+
+    {% if complex.human.name == 'Anne' %}
+        <span>{{ complex.human.name }}</span>
+    {% endif %}
+    {% if complex.human.age < '25' %}
+        <span>{{ complex.human.age }}</span>
+    {% elsif complex.human.age == '25' %}
+        <span>Cool</span>
+    {% else %}
+        <span>Not cool</span>
+    {% endif %}
+
+    {% unless complex.human.name %}
+        <span>Wont Show</span>
+    {% endunless %}
+</button>

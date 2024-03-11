@@ -1,20 +1,20 @@
 
 <button class="px-4 py-2 self-start text-sm whitespace-nowrap font-medium text-white bg-[#c70f19] border-bottom-[#980b13] hover:bg-[#df111c] hover:border-bottom-[#800a10] rounded-md shadow uppercase"
         >
-    Button{tmpl_if name="___" op="!=" value="show-it"}!{/tmpl_if}
+    Button<?php if (true) : ?>!<?php endif; ?>
 
-    {tmpl_if name="___" op="!=" value="show-it"}
+    <?php if (true) : ?>
         <span>Anne</span>
-    {/tmpl_if}
-    {tmpl_if name="___" op="==" value="dont-show-it"}
+    <?php endif; ?>
+    <?php if (false) : ?>
         <span>25</span>
-    {tmpl_elseif name="___" op="!=" value="show-it"}
+    <?php elseif (true) : ?>
         <span>Cool</span>
-    {tmpl_else}
+    <?php else : ?>
         <span>Not cool</span>
-    {/tmpl_if}
+    <?php endif; ?>
 
-    {tmpl_unless name="___" }
+    <?php if (!true) : ?>
         <span>Wont Show</span>
-    {/tmpl_unless}
+    <?php endif; ?>
 </button>

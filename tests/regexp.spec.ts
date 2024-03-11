@@ -130,6 +130,10 @@ describe('RegExp Tests for if', () => {
         assertMatchCount(regexForIf, '{% if VARIABLE %} {% endif %} {% if VARIABLE %} {% endif %}', 2);
         assertMatch(regexForIf, '{% if VARIABLE %} {% if VARIABLE %} {% endif %} {% endif %}');
 
+        assertMatch(regexForIf, '{% if complex.human.name == \'Anne\' %} {% endif %}');
+        assertMatch(regexForIf, '{% if complex.human.name == "Anne" %} {% endif %}');
+        assertMatch(regexForIf, '{% if complex.human.name == "Anne" %} {% if complex.human.name == "Anne" %} {% endif %} {% endif %}');
+
         // Matches from {% if VARIABLE %} up until the first {% endif %}
         assertMatchCount(regexForIf, '{% if VARIABLE %} {% if VARIABLE %} {% endif %} {% endif %}', 2);
         assertMatchCount(regexForIf, '{% if VARIABLE %} {% if VARIABLE %} {% endif %} {% endif %} {% endif %}', 2);
@@ -244,6 +248,10 @@ describe('RegExp Tests for if-elseif', () => {
         assertMatchCount(regexForIfElseIf, '{% elsif VARIABLE %}', 1);
         assertMatchCount(regexForIfElseIf, '{% elsif VARIABLE %} {% elsif VARIABLE %}', 2);
 
+        assertMatch(regexForIfElseIf, '{% elsif complex.human.name == \'Anne\' %} {% endif %}');
+        assertMatch(regexForIfElseIf, '{% elsif complex.human.name == "Anne" %} {% endif %}');
+        assertMatch(regexForIfElseIf, '{% elsif complex.human.name == "Anne" %} {% if complex.human.name == "Anne" %} {% endif %} {% endif %}');
+
         // Matches with empty value
         assertMatch(regexForIfElseIf, '{% elsif VARIABLE OPERATOR "" %} {% endif %}');
         assertMatch(regexForIfElseIf, `{% elsif VARIABLE OPERATOR '' %} {% endif %}`);
@@ -327,6 +335,9 @@ describe('RegExp Tests for unless', () => {
         assertMatchCount(regexForUnless, '{% unless VARIABLE %} {% endunless %}', 1);
         assertMatchCount(regexForUnless, '{% unless VARIABLE %} {% endunless %} {% unless VARIABLE %} {% endunless %}', 2);
         assertMatch(regexForUnless, '{% unless VARIABLE %} {% unless VARIABLE %} {% endunless %} {% endunless %}');
+
+        assertMatch(regexForUnless, '{% unless complex.human.name %} {% endunless %}');
+        assertMatch(regexForUnless, '{% unless complex.human.name %} {% endunless %}');
 
         // Matches from {% unless VARIABLE %} up until the first {% endunless %}
         assertMatchCount(regexForUnless, '{% unless VARIABLE %} {% unless VARIABLE %} {% endunless %} {% endunless %}', 2);

@@ -112,10 +112,36 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
         }).join('');
     }
 
+    private compileKnownIf(name: string, op: string, value: string, keyword = 'tmpl_if', isUnless: boolean = false): string | null {
+        const scope = this.transformer.getScope();
+
+        // If the variable is defined in the current scope, use it
+        if (scope[name] !== undefined) {
+            // TODO: Find a better way to show/hide the content.
+            // This was easiest, since if we remove the if, we also have to find which
+            // else /endif to remove. Or which statements belong to the if.
+            if (this.performIf(scope[name], op, value)) {
+                const opAndValue = isUnless ? '' : 'op="!=" value="show-it"';
+                return `{${keyword} name="___" ${opAndValue}}`;
+            } else {
+                const opAndValue = isUnless ? '' : 'op="==" value="dont-show-it"';
+                return `{${keyword} name="___" ${opAndValue}}`;
+            }
+        }
+
+        return null;
+    }
+
     /**
      * @inheritdoc
      */
     override if(name: string, op: string, value: string): string {
+        const knownIf = this.compileKnownIf(name, op, value);
+
+        if (knownIf !== null) {
+            return knownIf;
+        }
+
         if (op && value) {
             return `{tmpl_if name="${name}" op="${op}" value="${value}"}`;
         }
@@ -127,6 +153,12 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
      * @inheritdoc
      */
     override elsif(name: string, op: string, value: string): string {
+        const knownIf = this.compileKnownIf(name, op, value, 'tmpl_elseif');
+
+        if (knownIf !== null) {
+            return knownIf;
+        }
+
         if (op && value) {
             return `{tmpl_elseif name="${name}" op="${op}" value="${value}"}`;
         }
@@ -152,6 +184,12 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
      * @inheritdoc
      */
     override unless(name: string): string {
+        const knownIf = this.compileKnownIf(name, '!=', 'true', 'tmpl_unless', true);
+
+        if (knownIf !== null) {
+            return knownIf;
+        }
+
         return `{tmpl_unless name="${name}"}`;
     }
 

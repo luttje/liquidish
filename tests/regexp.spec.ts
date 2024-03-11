@@ -459,3 +459,17 @@ describe('RegExp Tests for loop-for', () => {
         }
     });
 });
+
+describe('RegExp Tests for variable strings', () => {
+    it('variable string regex should match variable strings', () => {
+        assertMatch(regexForVariableString, 'key: \'string\'');
+        assertMatch(regexForVariableString, 'anotherKey: "string"');
+        assertMatch(regexForVariableString, 'ints: 42');
+        assertMatch(regexForVariableString, 'floats: 3.14');
+        assertMatch(regexForVariableString, 'bools: true');
+        assertMatch(regexForVariableString, 'bools: false');
+        assertMatch(regexForVariableString, 'nulls: null');
+        assertMatch(regexForVariableString, 'nulls: null, key: \'string\'');
+        assertMatch(regexForVariableString, 'key: \'string\', anotherKey: "string", ints: 42, floats: 3.14, bools: true, false, nulls: null');
+    });
+});

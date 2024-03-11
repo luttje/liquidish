@@ -131,7 +131,7 @@ describe('ISPConfig Transformation Strategy', () => {
     });
 
     it('should transform render statements using default parameters in metadata', () => {
-        const transformed = getISPConfigTransform(`{% render './render-attributes-defaults.liquid' %}`, resolve(fixturesPath, 'render-attributes.liquid'));
+        const transformed = getISPConfigTransform(`{% render './render-attributes-defaults.liquid', overrideDefault: true %}`, resolve(fixturesPath, 'render-attributes.liquid'));
         const expected = readFixtureFile('render-attributes-defaults.ispconfig.expected.htm');
 
         expect(transformed).toBe(expected);

@@ -114,7 +114,7 @@ describe('PHP Transformation Strategy', () => {
     });
 
     it('should transform render statements using default parameters in metadata', () => {
-        const transformed = getPHPConfigTransform(`{% render './render-attributes-defaults.liquid' %}`, resolve(fixturesPath, 'render-attributes.liquid'));
+        const transformed = getPHPConfigTransform(`{% render './render-attributes-defaults.liquid', overrideDefault: true %}`, resolve(fixturesPath, 'render-attributes.liquid'));
         const expected = readFixtureFile('render-attributes-defaults.php.expected.php');
 
         expect(transformed).toBe(expected);

@@ -96,7 +96,7 @@ addDefaultTransform('meta', regexForMeta, (transformer, metaString) => {
 // }
 // NOTE: For simplicty sake the JSON cannot contain %}
 export const regexForRender = /{%\s*render\s*((?:'[^']+?)'|"(?:[^']+?)"){1}(?:\s*,\s*((?:[^%]+?|%(?!}))*))*?\s*%}/g;
-export const regexForVariableString = /(\w+):\s*((?:"(?:[^"\\]|\\.)*?"|'(?:[^'\\]|\\.)*?'))/g;
+export const regexForVariableString = /(\w+):\s*((?:"(?:[^"\\]|\\.)*?"|'(?:[^'\\]|\\.)*?'|\d+\.\d+|\d+|true|false|null))/g;
 addDefaultTransform('render', regexForRender, (transformer, component, variablesString) => {
     const variables = {};
 

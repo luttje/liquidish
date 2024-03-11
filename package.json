@@ -39,7 +39,7 @@
     "clear:build": "node ./tools/clear-build.mjs",
     "build": "npm run clear:build && tsc",
     "publish-patch": "npm run build && npm version patch && git push --follow-tags && npm publish",
-    "publish-minor": "npm run build && npm version minor && git push --follow-tags main && npm publish"
+    "publish-minor": "npm run build && npm version minor && git push --follow-tags && npm publish"
   },
   "dependencies": {
     "indent-string": "^5.0.0"

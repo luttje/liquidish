@@ -104,6 +104,7 @@ addDefaultTransform('render', regexForRender, (transformer, component, variables
         variablesString = variablesString.trim();
 
         // Try parse it as JSON
+        // TODO: This can silently fail if the JSON is invalid, the user should be notified, or we should just support JSON with a different syntax
         try {
             const parsed = JSON.parse(variablesString);
 

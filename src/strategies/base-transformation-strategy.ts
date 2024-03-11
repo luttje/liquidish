@@ -30,7 +30,11 @@ function addDefaultTransform(strategyMethodName, regex, parseFunction = null) {
 /**
  * Prevent users from using reserved keywords
  */
-function sanityCheckReservedKeywords(variables: Record<string, any>) {
+function sanityCheckReservedKeywords(variables?: Record<string, any>) {
+    if (!variables) {
+        return;
+    }
+
     for (const key of Object.keys(variables)) {
         if (key !== '___') {
             continue;

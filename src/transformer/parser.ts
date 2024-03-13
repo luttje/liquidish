@@ -114,8 +114,8 @@ export function tokenizeLiquid(input: string, logicTokens: LogicToken[]): Token[
 
     while ((match = regex.exec(input)) !== null) {
         const indentation = getIndentationFromLineStart(input, match.index);
-        const whitespaceCommandPre = match[regexForTokensGroupLogicWhitespaceCommandPre] as WhitespaceCommand;
-        const whitespaceCommandPost = match[regexForTokensGroupLogicWhitespaceCommandPost] as WhitespaceCommand;
+        const whitespaceCommandPre = match[regexForTokensGroupLogicWhitespaceCommandPre] as WhitespaceCommand || match[regexForTokensGroupVariableWhitespaceCommandPre] as WhitespaceCommand;
+        const whitespaceCommandPost = match[regexForTokensGroupLogicWhitespaceCommandPost] as WhitespaceCommand || match[regexForTokensGroupVariableWhitespaceCommandPost] as WhitespaceCommand;
         let newToken: Token;
 
         if (match[regexForTokensGroupLogic]) {

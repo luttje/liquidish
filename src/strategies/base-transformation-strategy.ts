@@ -1,5 +1,5 @@
 import { CancellationRequestedError } from "../transformer/cancellation-requested-error.js";
-import { LogicToken, LogicTokenFlags, Node, ParentNode, SelfClosingNode, TextNode } from "../transformer/parser.js";
+import { LogicToken, LogicTokenFlags, Node, ParentNode, SelfClosingNode, TextNode, findNextStatementInIfStatement, isParentNode, regexForVariable, walkNodes } from "../transformer/parser.js";
 import { buildVariablesScope, isNumericString } from "../utils.js";
 import { AbstractTransformationStrategy, IfStatementBlock, MetaData } from "./abstract-transformation-strategy.js";
 
@@ -18,27 +18,6 @@ export const defaultLogicTokens: LogicToken[] = [
     { type: 'meta' },
     { type: 'render' },
 ];
-
-/**
- * Prevent users from using reserved keywords
- */
-function sanityCheckReservedKeywords(variables?: Record<string, any>) {
-    if (!variables) {
-        return;
-    }
-
-    for (const key of Object.keys(variables)) {
-        if (key !== '___') {
-            continue;
-        }
-
-        const value = variables[key];
-
-        if (value === 'dont-show-it' || value === 'show-it') {
-            throw new Error('The variable name "___" with the value "dont-show-it" or "show-it" is reserved');
-        }
-    }
-}
 
 /**
  *
@@ -122,20 +101,23 @@ export const regexForVariableString = /(\w+):\s*((?:"(?:[^"\\]|\\.)*?"|'(?:[^'\\
 /**
  * If-statement
  */
-// `{% if VARIABLE OPERATOR 'VALUE' %} ... {% elsif ... %} ... {% else %} {% endif %}`
-// `{% if VARIABLE OPERATOR "VALUE" %} ... {% endif %}`
-// `{% if VARIABLE %} ... {% endif %}`
+// `VARIABLE OPERATOR 'VALUE'`
+export const regexForIf = /([\w\.]+)(?:\s+(\S+)\s*((?:'[^']*?')|(?:"[^"]*?")))?/;
 
-// addDefaultTransform('if', regexForFirstIfThroughLastEndif, (transformer, input) => {
-//     const tokens = tokenizeLiquid(input);
-//     const parsed = parseTokens(tokens);
+function unescapeValue(value: string): string {
+    const quoteType = value[0];
 
-//     console.log(parsed);
-//     // return [
-//     //     parsed
-//     // ];
-//     return [];
-// });
+    if (quoteType !== '"' && quoteType !== "'") {
+        return value;
+    }
+
+    value = value.slice(1, -1);
+
+    // Unescape the value
+    value = value.replace(new RegExp(`\\\\${quoteType}`, 'g'), quoteType);
+
+    return value;
+}
 
 /**
  * @public
@@ -162,6 +144,11 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
                 return this.parseFor(<ParentNode>node);
             case 'if':
                 return this.parseIf(<ParentNode>node);
+            case 'elseif':
+            case 'else':
+                // TODO: Should we not try transform earlier?
+                console.warn(`The node type "${node.type}" is not supported by the transformation strategy`);
+                return '';
             case 'unless':
                 return this.parseUnless(<ParentNode>node);
             case 'variable':
@@ -200,8 +187,6 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
             try {
                 const parsed = JSON.parse(variablesString);
 
-                sanityCheckReservedKeywords(parsed);
-
                 if (typeof parsed === 'object') {
                     for (const [key, value] of Object.entries(parsed)) {
                         variables[key] = value;
@@ -213,12 +198,7 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
 
                 while ((match = regexForVariableString.exec(variablesString)) !== null) {
                     const name = match[1];
-                    let value = match[2]
-                    const quoteType = value[0];
-                    value = value.slice(1, -1);
-
-                    // Unescape the value
-                    value = value.replace(new RegExp(`\\\\${quoteType}`, 'g'), quoteType);
+                    const value = unescapeValue(match[2]);
 
                     variables[name] = value;
                 }
@@ -236,67 +216,122 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
     }
 
     protected parseIf(node: ParentNode): string {
-        // Go through the if statement and parse it into a more usable format
-        const blocks: IfStatementBlock[] = [];
+        const matches = node.parameters.match(regexForIf);
+        const name = matches[1];
+        const op = matches[2];
+        const value = matches[3] ? unescapeValue(matches[3]) : undefined;
 
-        let currentBlock: IfStatementBlock = {
-            type: 'if',
-            name: '',
-            op: '',
-            value: '',
-            statements: '',
-        };
+        const scope = this.transformer.getScope();
+        // Check the first if-statement (node) to see if the name is defined in the current scope
+        // If it is and it's a truthy value, return the statements (not showing the if-statement)
+        // If it is and it's a falsy value, `findNextStatementInIfStatement` will return the next elseif/else-statement
+        // Check again if that is a truthy value, if it is, return the statements (not showing the elseif/else-statement)
+        // Repeat that until we find a truthy value or we reach the end of the if-statement
+        // If the name is not defined in the current scope, return the if-statement as is using this.if
 
-        for (const child of node.statements) {
-            if (child.type === 'text') {
-                currentBlock.statements += (<TextNode>child).value;
-                continue;
-            }
+        if (scope[name] !== undefined) {
+            // if (this.performIf(scope[name], op, value)) {
+            //     return this.statementsToText(node.statements, true);
+            // }
 
-            const text = this.statementsToText(child.statements);
+            // const nextStatement = findNextStatementInIfStatement(node);
 
-            switch (child.type) {
-                case 'if':
-                    blocks.push(currentBlock);
-                    currentBlock = {
-                        type: 'if',
-                        name: text,
-                        op: '',
-                        value: '',
-                        statements: '',
-                    };
-                    break;
-                case 'elseif':
-                case 'elsif':
-                    blocks.push(currentBlock);
-                    currentBlock = {
-                        type: 'elseif',
-                        name: text,
-                        op: '',
-                        value: '',
-                        statements: '',
-                    };
-                    break;
-                case 'else':
-                    blocks.push(currentBlock);
-                    currentBlock = {
-                        type: 'else',
-                        statements: '',
-                    };
-                    break;
-                default:
-                    throw new Error(`Unknown if statement block type: ${child.type}`);
-            }
+            // if (nextStatement) {
+            //     return 'x'+this.transformNode(nextStatement);
+            // }
+
+            // return '';
         }
+
+        let ifStatementBlocks: IfStatementBlock[] = [];
+
+        // The first node is the if-statement, the last node in the statements array may be and else/elseif-statement, inside that the same repeats
+
+        // ifStatementBlocks.push({
+        //     type: 'if',
+        //     name,
+        //     op,
+        //     value,
+        //     statements: this.statementsToText(node.statements, true),
+        // });
+
+        let currentNode = node;
+
+        while (currentNode) {
+            if (currentNode.type === 'else') {
+                ifStatementBlocks.push({
+                    type: 'else',
+                    statements: this.statementsToText(currentNode.statements, true),
+                });
+
+                break;
+            }
+
+            const matches = currentNode.parameters.match(regexForIf);
+            const name = matches[1];
+            const op = matches[2];
+            const value = matches[3] ? unescapeValue(matches[3]) : undefined;
+
+            ifStatementBlocks.push({
+                type: currentNode.type as 'if' | 'elseif' | 'else',
+                name,
+                op,
+                value,
+                statements: this.statementsToText(currentNode.statements, true),
+            });
+
+            currentNode = findNextStatementInIfStatement(currentNode);
+        }
+
+        return this.if(ifStatementBlocks);
     }
 
     protected parseUnless(node: ParentNode): string {
-        const [name, statements] = this.parseUnlessNameAndStatements(node);
-        return this.unless(name, statements);
+        const matches = node.parameters.match(regexForIf);
+        const name = matches[1];
+        const op = matches[2];
+        const value = matches[3] ? unescapeValue(matches[3]) : undefined;
+
+        const scope = this.transformer.getScope();
+
+        if (scope[name] !== undefined) {
+            if (!this.performIf(scope[name], op, value)) {
+                return this.statementsToText(node.statements, true);
+            }
+
+            const nextStatement = findNextStatementInIfStatement(node);
+
+            if (nextStatement) {
+                return this.transformNode(nextStatement);
+            }
+
+            return '';
+        }
+
+        return this.unless(name, this.statementsToText(node.statements));
     }
 
     protected parseVariable(node: SelfClosingNode): string {
-        return this.variable(node.parameters);
+        const scope = this.transformer.getScope();
+        const name = node.parameters;
+
+        // If the variable is defined in the current scope, use it
+        if (scope[name] !== undefined) {
+            const variable = scope[name];
+
+            // We may have been passed a variable, try parse it
+            const matches = new RegExp(regexForVariable.source, 'g').exec(variable);
+
+            if (!matches) {
+                return variable;
+            }
+
+            return variable.replace(regexForVariable, (match, name) => {
+                return this.variable(name);
+            });
+        }
+
+        return this.variable(name);
     }
 
     /**

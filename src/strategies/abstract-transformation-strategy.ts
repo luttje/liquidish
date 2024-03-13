@@ -54,10 +54,16 @@ export abstract class AbstractTransformationStrategy {
         return output;
     }
 
-    protected statementsToText(statements: Node[]): string {
+    protected statementsToText(statements: Node[], exceptLastIfToken: boolean = false): string {
         let output = '';
 
-        for (const node of statements) {
+        for (let i = 0; i < statements.length; i++) {
+            const node = statements[i];
+
+            if (exceptLastIfToken && (node.type === 'elseif' || node.type === 'else')) {
+                continue;
+            }
+
             walkNodes(node, (node) => {
                 output += this.transformNode(node);
             });

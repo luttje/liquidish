@@ -2,7 +2,8 @@ import { LiquidishTransformer } from "./transformer.js";
 
 export type TransformParser = (transformer: LiquidishTransformer, ...args: any[]) => any[];
 
-export const regexForTokens = /({%\s*(LOGIC_TOKENS)\s*(.*?)\s*?%})|(\{\{\s*(.*?)\s*\}\})|(.+?)(?={%|\{\{|$)/gs;
+export const regexForVariable = /{{\s*([\w\.]+?(?:\[[^\]]*?\])*)?\s*}}/g;
+export const regexForTokens = /({%\s*(LOGIC_TOKENS)\s*(.*?)\s*?%})|(VARIABLE)|(.+?)(?={%|\{\{|$)/gs;
 export const regexForTokensGroupLogic = 1;
 export const regexForTokensGroupLogicType = 2;
 export const regexForTokensGroupLogicParameters = 3;
@@ -79,7 +80,9 @@ export function buildLogicTokenRegex(logicTokens: LogicToken[]) {
     const logicTokensRegex = logicTokens.map(token => token.type).join('|');
 
     return new RegExp(
-        regexForTokens.source.replace('LOGIC_TOKENS', logicTokensRegex),
+        regexForTokens.source
+            .replace('LOGIC_TOKENS', logicTokensRegex)
+            .replace('VARIABLE', regexForVariable.source),
         regexForTokens.flags
     );
 }
@@ -106,7 +109,7 @@ export function tokenizeLiquid(input: string, logicTokens: LogicToken[]): Token[
         } else if (match[regexForTokensGroupVariable]) {
             tokens.push(<SelfClosingNode>{
                 type: 'variable',
-                parameters: match[regexForTokensGroupVariableName]
+                parameters: match[regexForTokensGroupVariableName].trim(),
             });
         } else if (match[regexForTokensGroupText]) {
             tokens.push(<TextNode>{
@@ -185,7 +188,7 @@ export function parseTokens(tokens: Token[], logicTokens: LogicToken[]): Node[] 
  * Finds the next statement in this if-statement by looking for the next elsif or else
  * inside the current if-statement.
  */
-export function findNextStatementInIfStatement(ifNode: ParentNode): ParentNode {
+export function findNextStatementInIfStatement(ifNode: ParentNode): ParentNode | null {
     // It will also be at the end of the statements
     if (ifNode.statements.length === 0) {
         return null;

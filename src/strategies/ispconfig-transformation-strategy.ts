@@ -107,49 +107,44 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
         }).join('');
     }
 
-    private compileKnownIf(name: string, op: string, value: string, statements: string, isInverse = false): string | null {
-        const scope = this.transformer.getScope();
-
-        // If the variable is defined in the current scope, use it
-        if (scope[name] !== undefined) {
-            if (this.performIf(scope[name], op, value) !== isInverse) {
-                return statements;
-            } else {
-                return '';
-            }
-        }
-
-        return null;
-    }
 
     /**
      * @inheritdoc
      */
     override if(statementBlocks: IfStatementBlock[]): string {
-        return '';
-        // const knownIf = this.compileKnownIf(name, op, value, statements);
+        let output = '';
 
-        // if (knownIf !== null) {
-        //     return knownIf;
-        // }
+        for (const block of statementBlocks) {
+            switch (block.type) {
+                case 'if':
+                    if (block.op && block.value) {
+                        output += `{tmpl_if name="${block.name}" op="${block.op}" value="${block.value}"}${block.statements}`;
+                    } else {
+                        output += `{tmpl_if name="${block.name}"}${block.statements}`;
+                    }
+                    break;
+                case 'elseif':
+                    if (block.op && block.value) {
+                        output += `{tmpl_elseif name="${block.name}" op="${block.op}" value="${block.value}"}${block.statements}`;
+                    } else {
+                        output += `{tmpl_elseif name="${block.name}"}${block.statements}`;
+                    }
+                    break;
+                case 'else':
+                    output += `{tmpl_else}${block.statements}`;
+                    break;
+            }
+        }
 
-        // if (op && value) {
-        //     return `{tmpl_if name="${name}" op="${op}" value="${value}"}${statements}{/tmpl_if}`;
-        // }
+        output += `{/tmpl_if}`;
 
-        // return `{tmpl_if name="${name}"}${statements}{/tmpl_if}`;
+        return output;
     }
 
     /**
      * @inheritdoc
      */
     override unless(name: string, statements: string): string {
-        const knownIf = this.compileKnownIf(name, '!=', 'true', statements, true);
-
-        if (knownIf !== null) {
-            return knownIf;
-        }
-
         return `{tmpl_unless name="${name}"}${statements}{/tmpl_unless}`;
     }
 
@@ -157,14 +152,6 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
      * @inheritdoc
      */
     override variable(variable: string): string {
-        const scope = this.transformer.getScope();
-
-        // If the variable is defined in the current scope, use it
-        if (scope[variable] !== undefined) {
-            return scope[variable];
-        }
-
-        // Otherwise it's a template variable
         return `{tmpl_var name="${variable}"}`;
     }
 

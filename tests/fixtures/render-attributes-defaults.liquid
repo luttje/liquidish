@@ -18,7 +18,9 @@
     {{ slot }}{% if slot == 'Button' %}!{% endif %}
 
     {% if complex.human %}
+        {% if complex.human.name %}
         <span>Welcome</span>
+        {% endif %}
     {% endif %}
 
     {% if overrideDefault %}

@@ -67,18 +67,15 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
         }).join('');
     }
 
-    private compileKnownIf(name: string, op: string, value: string, keyword = 'if ('): string | null {
+    private compileKnownIf(name: string, op: string, value: string, statements: string): string | null {
         const scope = this.transformer.getScope();
 
         // If the variable is defined in the current scope, use it
         if (scope[name] !== undefined) {
-            // TODO: Find a better way to show/hide the content.
-            // This was easiest, since if we remove the if, we also have to find which
-            // else /endif to remove. Or which statements belong to the if.
             if (this.performIf(scope[name], op, value)) {
-                return `<?php ${keyword}true) : ?>`;
+                return statements;
             } else {
-                return `<?php ${keyword}false) : ?>`;
+                return '';
             }
         }
 
@@ -88,69 +85,31 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
     /**
      * @inheritdoc
      */
-    override if(name: string, op: string, value: string): string {
-        const knownIf = this.compileKnownIf(name, op, value);
+    override if(name: string, op: string, value: string, statements: string): string {
+        const knownIf = this.compileKnownIf(name, op, value, statements);
 
         if (knownIf !== null) {
             return knownIf;
         }
 
         if (op && value) {
-            return `<?php if ($${name} ${op} '${value}') : ?>`;
+            return `<?php if ($${name} ${op} '${value}') : ?>${statements}<?php endif; ?>`;
         }
 
-        return `<?php if ($${name}) : ?>`;
+        return `<?php if ($${name}) : ?>${statements}<?php endif; ?>`;
     }
 
     /**
      * @inheritdoc
      */
-    override elsif(name: string, op: string, value: string): string {
-        const knownIf = this.compileKnownIf(name, op, value, 'elseif (');
-
-        if (knownIf !== null) {
-            return knownIf;
-        }
-
-        if (op && value) {
-            return `<?php elseif ($${name} ${op} '${value}') : ?>`;
-        }
-
-        return `<?php elseif ($${name}) : ?>`;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    override else(): string {
-        return '<?php else : ?>';
-    }
-
-    /**
-     * @inheritdoc
-     */
-    override endif(): string {
-        return '<?php endif; ?>';
-    }
-
-    /**
-     * @inheritdoc
-     */
-    override unless(name: string): string {
-        const knownIf = this.compileKnownIf(name, '!=', 'true', 'if (!');
+    override unless(name: string, statements: string): string {
+        const knownIf = this.compileKnownIf(name, '!=', 'true', statements);
 
         if (knownIf !== null) {
             return knownIf;
         }
 
         return `<?php if (!$${name}) : ?>`;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    override endunless(): string {
-        return '<?php endif; ?>';
     }
 
     /**

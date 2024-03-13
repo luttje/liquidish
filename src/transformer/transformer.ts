@@ -184,6 +184,9 @@ export class LiquidishTransformer {
             }
         }
 
+        // Trim all empty lines
+        contents = contents.replace(/^\s*[\r\n]/gm, '');
+
         return contents;
     }
 }

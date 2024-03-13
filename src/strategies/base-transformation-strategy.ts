@@ -173,64 +173,64 @@ addDefaultTransform('variable', regexForVariable);
 /**
  * If-statement
  */
-// `{% if VARIABLE OPERATOR 'VALUE' %}`
-// `{% if VARIABLE OPERATOR "VALUE" %}`
-// `{% if VARIABLE %}`
-export const regexForIf = /{%\s*if\s*([\w\.]+?)\s+?(?:(\S+)\s*((?:'[^']*?)'|"(?:[^']*?)"))*?\s*%}/g;
-addDefaultTransform('if', regexForIf, (transformer, name, op, value) => {
-    if (op && value) {
-        value = value.slice(1, -1); // trim quotes
-        return [
-            name,
-            op,
-            value,
-        ];
-    }
+// `{% if VARIABLE OPERATOR 'VALUE' %} ... {% endif %}`
+// `{% if VARIABLE OPERATOR "VALUE" %} ... {% endif %}`
+// `{% if VARIABLE %} ... {% endif %}`
+export const regexForIf = /{%\s*if\s*([\w\.]+?)\s+?(?:(\S+)\s*((?:'[^']*?'|"[^"]*?")))*?\s*%}(.*){%\s*endif\s*%}/gs;
+export const regexForIfEnd = /{%\s*endif\s*%}/;
+addDefaultTransform('if', regexForIf, (transformer, name, op, value, statements) => {
+    // Find the first endif, and check if there are any other if/else/elseif/endif in the statements
+    const match = statements.match(regexForIfEnd);
+
+    if (match) {
+        const localStatements = statements.slice(0, match.index);
+        const remainingStatements = statements.slice(match.index + match[0].length);
+
+        // If there are any if/else/elseif/endif in the local statements,
+
 
     return [
         name,
-        undefined,
-        undefined,
+        op,
+        value ? value.slice(1, -1) : undefined,
+        statements
     ];
 });
 
-// `{% elsif VARIABLE OPERATOR 'VALUE' %}`
-// `{% elsif VARIABLE OPERATOR "VALUE" %}`
-// `{% elsif VARIABLE %}`
+
 export const regexForIfElseIf = /{%\s*elsif\s*?([\w\.]+?)\s*?(?:(\S+)\s*((?:'[^']*?)'|"(?:[^']*?)"))*?\s*%}/g;
-addDefaultTransform('elsif', regexForIfElseIf, (transformer, name, op, value) => {
-    if (op && value) {
-        value = value.slice(1, -1); // trim quotes
-        return [
-            name,
-            op,
-            value,
-        ];
-    }
+// addDefaultTransform('elsif', regexForIfElseIf, (transformer, name, op, value) => {
+//     if (op && value) {
+//         value = value.slice(1, -1); // trim quotes
+//         return [
+//             name,
+//             op,
+//             value,
+//         ];
+//     }
 
-    return [
-        name,
-        undefined,
-        undefined,
-    ];
-});
+//     return [
+//         name,
+//         undefined,
+//         undefined,
+//     ];
+// });
 
-// `{% else %}`
+// // `{% else %}`
 export const regexForIfElse = /{%\s*else\s*%}/g;
-addDefaultTransform('else', regexForIfElse);
-// `{% endif %}`
-export const regexForIfEnd = /{%\s*endif\s*%}/g;
-addDefaultTransform('endif', regexForIfEnd);
+// addDefaultTransform('else', regexForIfElse);
+// // `{% endif %}`
+// addDefaultTransform('endif', regexForIfEnd);
 
 /**
  * Unless-statement
  */
 // `{% unless VARIABLE %}`
-export const regexForUnless = /{%\s*?unless\s*?([\w\.]+?)\s*?%}/g;
+export const regexForUnless = /{%\s*?unless\s*?([\w\.]+?)\s*?%}(.*?){%\s*endunless\s*%}/gs;
 addDefaultTransform('unless', regexForUnless);
 // `{% endunless %}`
 export const regexForUnlessEnd = /{%\s*?endunless\s*?%}/g;
-addDefaultTransform('endunless', regexForUnlessEnd);
+// addDefaultTransform('endunless', regexForUnlessEnd);
 
 /**
  * @public

@@ -29,17 +29,9 @@ export abstract class AbstractTransformationStrategy {
 
     public abstract for(itemName: string, collectionName: string, statement: string): string;
 
-    public abstract if(name: string, op: string, value: string): string;
+    public abstract if(name: string, op: string, value: string, statements: string): string;
 
-    public abstract elsif(name: string, op: string, value: string): string;
-
-    public abstract else(): string;
-
-    public abstract endif(): string;
-
-    public abstract unless(name: string): string;
-
-    public abstract endunless(): string;
+    public abstract unless(name: string, statements: string): string;
 
     public abstract variable(variable: string): string;
 }

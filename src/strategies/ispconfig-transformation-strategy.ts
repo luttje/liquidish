@@ -112,20 +112,15 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
         }).join('');
     }
 
-    private compileKnownIf(name: string, op: string, value: string, keyword = 'tmpl_if', isUnless: boolean = false): string | null {
+    private compileKnownIf(name: string, op: string, value: string, statements: string, isInverse = false): string | null {
         const scope = this.transformer.getScope();
 
         // If the variable is defined in the current scope, use it
         if (scope[name] !== undefined) {
-            // TODO: Find a better way to show/hide the content.
-            // This was easiest, since if we remove the if, we also have to find which
-            // else /endif to remove. Or which statements belong to the if.
-            if (this.performIf(scope[name], op, value)) {
-                const opAndValue = isUnless ? '' : 'op="!=" value="show-it"';
-                return `{${keyword} name="___" ${opAndValue}}`;
+            if (this.performIf(scope[name], op, value) !== isInverse) {
+                return statements;
             } else {
-                const opAndValue = isUnless ? '' : 'op="==" value="dont-show-it"';
-                return `{${keyword} name="___" ${opAndValue}}`;
+                return '';
             }
         }
 
@@ -135,69 +130,31 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
     /**
      * @inheritdoc
      */
-    override if(name: string, op: string, value: string): string {
-        const knownIf = this.compileKnownIf(name, op, value);
+    override if(name: string, op: string, value: string, statements: string): string {
+        const knownIf = this.compileKnownIf(name, op, value, statements);
 
         if (knownIf !== null) {
             return knownIf;
         }
 
         if (op && value) {
-            return `{tmpl_if name="${name}" op="${op}" value="${value}"}`;
+            return `{tmpl_if name="${name}" op="${op}" value="${value}"}${statements}{/tmpl_if}`;
         }
 
-        return `{tmpl_if name="${name}"}`;
+        return `{tmpl_if name="${name}"}${statements}{/tmpl_if}`;
     }
 
     /**
      * @inheritdoc
      */
-    override elsif(name: string, op: string, value: string): string {
-        const knownIf = this.compileKnownIf(name, op, value, 'tmpl_elseif');
+    override unless(name: string, statements: string): string {
+        const knownIf = this.compileKnownIf(name, '!=', 'true', statements, true);
 
         if (knownIf !== null) {
             return knownIf;
         }
 
-        if (op && value) {
-            return `{tmpl_elseif name="${name}" op="${op}" value="${value}"}`;
-        }
-
-        return `{tmpl_elseif name="${name}"}`;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    override else(): string {
-        return '{tmpl_else}';
-    }
-
-    /**
-     * @inheritdoc
-     */
-    override endif(): string {
-        return '{/tmpl_if}';
-    }
-
-    /**
-     * @inheritdoc
-     */
-    override unless(name: string): string {
-        const knownIf = this.compileKnownIf(name, '!=', 'true', 'tmpl_unless', true);
-
-        if (knownIf !== null) {
-            return knownIf;
-        }
-
-        return `{tmpl_unless name="${name}"}`;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    override endunless(): string {
-        return '{/tmpl_unless}';
+        return `{tmpl_unless name="${name}"}${statements}{/tmpl_unless}`;
     }
 
     /**

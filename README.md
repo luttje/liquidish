@@ -276,6 +276,38 @@ The data provided must be a valid JSON object. The meta tag must be the first el
 
 The `isChildOnly` key can be used for sub-templates. When the transformer runs into a file with `isChildOnly` set to `true`, it will not compile it to a separate file. Instead, it can only be included in the parent file using the `render` tag.
 
+### Whitespace control
+
+Just [like Liquid](https://shopify.github.io/liquid/basics/whitespace/), Liquidish outputs empty lines whenever you use a tag:
+
+```liquid
+{% if value_that_is_true %}
+    {{ my_variable }}
+{% endif %} !
+```
+
+This will output:
+
+```html
+
+    Contents of my variable
+ !
+```
+
+To trim whitespaces you can use the `{%-` and `-%}` for logic tags and `{{-` and `-}}` for variable tags:
+
+```liquid
+{%- if value_that_is_true %}
+    {{- my_variable }}
+{%- endif -%} !
+```
+
+This will output:
+
+```html
+Contents of my variable!
+```
+
 ### Other syntax
 
 Transformations can be added to Liquidish by using transformation strategies like those provided in the [🗺 Transformation Strategies](#-transformation-strategies) section.
@@ -408,4 +440,4 @@ This will be transformed to PHP's `include` statement.
 
 You can create your own transformation strategy by extending the `TransformationStrategy` class.
 
-See the tests and the existing strategies for examples.
+See the [tests](./tests/) and the existing strategies ([php](./src/strategies/php-transformation-strategy.ts), [ISPConfig](./src/strategies/ispconfig-transformation-strategy.ts)) for examples.

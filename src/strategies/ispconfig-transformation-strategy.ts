@@ -1,7 +1,5 @@
 import { BaseTransformationStrategy } from './base-transformation-strategy.js';
-import { buildVariablesScope, getIndentationFromLineStart, readComponentWithIndentation } from '../utils.js';
-import { LogicToken, LogicTokenFlags, Node, ParentNode, SelfClosingNode, TransformParser } from '../transformer/parser.js';
-import { IfStatementBlock } from './abstract-transformation-strategy.js';
+import { LogicToken, LogicTokenFlags, Node, ParentNode, SelfClosingNode } from '../transformer/parser.js';
 
 /**
  * @public
@@ -62,41 +60,51 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
     /**
      * @inheritdoc
      */
-    override if(statementBlocks: IfStatementBlock[]): string {
-        let output = '';
-
-        for (const block of statementBlocks) {
-            switch (block.type) {
-                case 'if':
-                    if (block.op && block.value) {
-                        output += `{tmpl_if name="${block.name}" op="${block.op}" value="${block.value}"}${block.statements}`;
-                    } else {
-                        output += `{tmpl_if name="${block.name}"}${block.statements}`;
-                    }
-                    break;
-                case 'elseif':
-                    if (block.op && block.value) {
-                        output += `{tmpl_elseif name="${block.name}" op="${block.op}" value="${block.value}"}${block.statements}`;
-                    } else {
-                        output += `{tmpl_elseif name="${block.name}"}${block.statements}`;
-                    }
-                    break;
-                case 'else':
-                    output += `{tmpl_else}${block.statements}`;
-                    break;
-            }
+    override if(name: string, op?: string, value?: string): string {
+        if (op && value) {
+            return `{tmpl_if name="${name}" op="${op}" value="${value}"}`;
         }
 
-        output += `{/tmpl_if}`;
-
-        return output;
+        return `{tmpl_if name="${name}"}`;
     }
 
     /**
      * @inheritdoc
      */
-    override unless(name: string, statements: string): string {
-        return `{tmpl_unless name="${name}"}${statements}{/tmpl_unless}`;
+    override elseif(name: string, op?: string, value?: string): string {
+        if (op && value) {
+            return `{tmpl_elseif name="${name}" op="${op}" value="${value}"}`;
+        }
+
+        return `{tmpl_elseif name="${name}"}`;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    override else(): string {
+        return `{tmpl_else}`;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    override endif(): string {
+        return '{/tmpl_if}';
+    }
+
+    /**
+     * @inheritdoc
+     */
+    override unless(name: string): string {
+        return `{tmpl_unless name="${name}"}`;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    override endunless(): string {
+        return `{/tmpl_unless}`;
     }
 
     /**

@@ -1,6 +1,5 @@
 import { BaseTransformationStrategy } from './base-transformation-strategy.js';
-import { buildVariablesScope, getIndentationFromLineStart, readComponentWithIndentation, unescapeValue } from '../utils.js';
-import { IfStatementBlock } from './abstract-transformation-strategy.js';
+import { unescapeValue } from '../utils.js';
 import { LogicToken, LogicTokenFlags, Node, ParentNode, SelfClosingNode } from '../transformer/parser.js';
 
 /**
@@ -48,41 +47,51 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
     /**
      * @inheritdoc
      */
-    override if(statementBlocks: IfStatementBlock[]): string {
-        let output = '';
-
-        for (const block of statementBlocks) {
-            switch (block.type) {
-                case 'if':
-                    if (block.op && block.value) {
-                        output += `<?php if ($${block.name} ${block.op} '${block.value}') : ?>${block.statements}`;
-                    } else {
-                        output += `<?php if ($${block.name}) : ?>${block.statements}`;
-                    }
-                    break;
-                case 'elseif':
-                    if (block.op && block.value) {
-                        output += `<?php elseif ($${block.name} ${block.op} '${block.value}') : ?>${block.statements}`;
-                    } else {
-                        output += `<?php elseif ($${block.name}) : ?>${block.statements}`;
-                    }
-                    break;
-                case 'else':
-                    output += `<?php else : ?>${block.statements}`;
-                    break;
-            }
+    override if(name: string, op?: string, value?: string): string {
+        if (op && value) {
+            return `<?php if ($${name} ${op} '${value}') : ?>`;
         }
 
-        output += `<?php endif; ?>`;
-
-        return output;
+        return `<?php if ($${name}) : ?>`;
     }
 
     /**
      * @inheritdoc
      */
-    override unless(name: string, statements: string): string {
-        return `<?php if (!$${name}) : ?>${statements}<?php endif; ?>`;
+    override elseif(name: string, op?: string, value?: string): string {
+        if (op && value) {
+            return `<?php elseif ($${name} ${op} '${value}') : ?>`;
+        }
+
+        return `<?php elseif ($${name}) : ?>`;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    override else(): string {
+        return `<?php else : ?>`;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    override endif(): string {
+        return `<?php endif; ?>`;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    override unless(name: string): string {
+        return `<?php if (!$${name}) : ?>`;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    override endunless(): string {
+        return `<?php endif; ?>`;
     }
 
     /**

@@ -1,7 +1,7 @@
 import { CancellationRequestedError } from "../transformer/cancellation-requested-error.js";
 import { LogicToken, LogicTokenFlags, Node, ParentNode, SelfClosingNode, TextNode, findNextStatementInIfStatement, isParentNode, regexForVariable, walkNodes } from "../transformer/parser.js";
 import { buildVariablesScope, isNumericString, readComponentWithIndentation, unescapeValue } from "../utils.js";
-import { AbstractTransformationStrategy, IfStatementBlock, MetaData } from "./abstract-transformation-strategy.js";
+import { AbstractTransformationStrategy, MetaData } from "./abstract-transformation-strategy.js";
 
 export const defaultLogicTokens: LogicToken[] = [
     { type: 'comment', flags: LogicTokenFlags.OpensScope },
@@ -130,45 +130,22 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
     }
 
     protected parseIf(node: ParentNode): string {
-        const matches = node.parameters.match(regexForIf);
-        const name = matches[1];
-        const op = matches[2];
-        const value = matches[3] ? unescapeValue(matches[3]) : undefined;
-
         const scope = this.transformer.getScope();
-        // Check the first if-statement (node) to see if the name is defined in the current scope
-        // If it is and it's a truthy value, return the statements (not showing the if-statement)
-        // If it is and it's a falsy value, `findNextStatementInIfStatement` will return the next elseif/else-statement
-        // Check again if that is a truthy value, if it is, return the statements (not showing the elseif/else-statement)
-        // Repeat that until we find a truthy value or we reach the end of the if-statement
-        // If the name is not defined in the current scope, return the if-statement as is using this.if
 
-        if (scope[name] !== undefined) {
-            // if (this.performIf(scope[name], op, value)) {
-            //     return this.statementsToText(node.statements, true);
-            // }
-
-            // const nextStatement = findNextStatementInIfStatement(node);
-
-            // if (nextStatement) {
-            //     return 'x'+this.transformNode(nextStatement);
-            // }
-
-            // return '';
-        }
-
-        let ifStatementBlocks: IfStatementBlock[] = [];
+        let output = '';
 
         // The first node is the if-statement, the last node in the statements array may be and else/elseif-statement, inside that the same pattern repeats
         let currentNode = node;
+        let isOutputting = true;
 
         while (currentNode) {
             if (currentNode.type === 'else') {
-                ifStatementBlocks.push({
-                    type: 'else',
-                    statements: this.statementsToText(currentNode.statements, true),
-                });
+                if (isOutputting) {
+                    output += this.else();
+                    output += this.statementsToText(currentNode.statements);
+                }
 
+                // Else is always the last statement in an if-statement
                 break;
             }
 
@@ -177,18 +154,38 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
             const op = matches[2];
             const value = matches[3] ? unescapeValue(matches[3]) : undefined;
 
-            ifStatementBlocks.push({
-                type: currentNode.type as 'if' | 'elseif' | 'else',
-                name,
-                op,
-                value,
-                statements: this.statementsToText(currentNode.statements, true),
-            });
+            if (scope[name] !== undefined) {
+                isOutputting = false;
+            }
+
+            if (isOutputting) {
+                if (currentNode.type === 'if') {
+                    output += this.if(name, op, value);
+                } else if (currentNode.type === 'elseif') {
+                    output += this.elseif(name, op, value);
+                } else {
+                    throw new Error(`Unknown node type: ${currentNode.type}`);
+                }
+
+                output += this.statementsToText(currentNode.statements, true);
+            } else {
+                const result = this.performIf(scope[name], op, value);
+
+                if (result) {
+                    output += this.statementsToText(currentNode.statements, true);
+                    console.log(`[${output}]`);
+                    break;
+                }
+            }
 
             currentNode = findNextStatementInIfStatement(currentNode);
         }
 
-        return this.if(ifStatementBlocks);
+        if (isOutputting) {
+            output += this.endif();
+        }
+
+        return output;
     }
 
     protected parseUnless(node: ParentNode): string {
@@ -213,7 +210,11 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
             return '';
         }
 
-        return this.unless(name, this.statementsToText(node.statements));
+        let output = this.unless(name);
+        output += this.statementsToText(node.statements);
+        output += this.endunless();
+
+        return output;
     }
 
     protected parseVariable(node: SelfClosingNode): string {

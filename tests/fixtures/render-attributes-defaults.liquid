@@ -17,28 +17,36 @@
         {{ attributes }}>
     {{ slot }}{% if slot == 'Button' %}!{% endif %}
 
-    {% if complex.human %}
+    {%- if complex.human -%}
+        {%- if complex.human.name%}
         <span>Welcome</span>
-    {% endif %}
+        {%- endif -%}
+    {%- endif %}
 
-    {% if overrideDefault %}
+    {%- if overrideDefault%}
         Override
-    {%endif%}
+    {%- endif -%}
 
-    {% if complex.human.isOnline %}
+    {%- if complex.human.isOnline %}
         <span>Online</span>
-    {% endif %}
+    {%- endif -%}
 
-    {% if complex.human.name == 'Anne' %}
+    {%- if complex.human.name == 'Anne' %}
         <span>{{ complex.human.name }}</span>
-    {% endif %}
-    {% if complex.human.age < '25' %}
-        <span>{{ complex.human.age }}</span>
-    {% elsif complex.human.age == '25' %}
+    {%- endif -%}
+    {%- if complex.human.age == '25' -%}
+        {% if complex.human.age < '18' %}
+        Minor
+        {% elsif complex.human.age > '64' %}
+        Senior
+        {% else %}
+        Adult
+        {%- endif %}
+    {%- elsif complex.human.age == '25'%}
         <span>Cool</span>
-    {% else %}
+    {%- else -%}
         <span>Not cool</span>
-    {% endif %}
+    {%- endif -%}
 
     {% unless complex.human.name %}
         <span>Wont Show</span>

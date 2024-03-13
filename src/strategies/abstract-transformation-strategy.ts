@@ -1,5 +1,5 @@
+import { LogicToken, Node, walkNodes } from "../transformer/parser.js";
 import { LiquidishTransformer } from "../transformer/transformer.js";
-import { Transformation } from "./base-transformation-strategy.js";
 
 export type MetaData = {
     isChildOnly?: boolean;
@@ -19,27 +19,71 @@ export abstract class AbstractTransformationStrategy {
         this.transformer = transformer;
     }
 
-    public abstract getTransformations(): Transformation[];
+    public transform(ast: Node[]): string {
+        let output = '';
 
+        for (const node of ast) {
+            output += this.transformNode(node);
+        }
+
+        return output;
+    }
+
+    protected abstract transformNode(node: Node): string | null;
+
+    public abstract getLogicTokens(): LogicToken[];
+
+    /**
+     * Transformer methods
+     */
+
+    /**
+     * Transforms a {% meta ... %} tag to the target language.
+     */
     public abstract meta(meta: MetaData): string;
 
+    /**
+     * Transforms a {% comment %} ... {% endcomment %} tag to the target language.
+     */
     public abstract comment(comment: string): string;
 
-    public abstract render(component: string, variables: Record<string, string>, offset: number, string: string): string;
+    /**
+     * Transforms a {% render, ... %} tag to the target language.
+     */
+    public abstract render(component: string, variables: Record<string, string>): string;
 
-    public abstract for(itemName: string, collectionName: string, statement: string): string;
+    /**
+     * Transforms a {% if ... %} tag to the target language.
+     */
+    public abstract if(name: string, op?: string, value?: string): string;
 
-    public abstract if(name: string, op: string, value: string): string;
+    /**
+     * Transforms a {% elseif ... %} tag to the target language.
+     */
+    public abstract elseif(name: string, op?: string, value?: string): string;
 
-    public abstract elsif(name: string, op: string, value: string): string;
-
+    /**
+     * Transforms a {% else %} tag to the target language.
+     */
     public abstract else(): string;
 
+    /**
+     * Transforms a {% endif %} tag to the target language.
+     */
     public abstract endif(): string;
 
+    /**
+     * Transforms a {% unless %} tag to the target language.
+     */
     public abstract unless(name: string): string;
 
+    /**
+     * Transforms a {% endunless %} tag to the target language.
+     */
     public abstract endunless(): string;
 
+    /**
+     * Transforms a {{ variable }} tag to the target language.
+     */
     public abstract variable(variable: string): string;
 }

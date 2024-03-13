@@ -1,44 +1,7 @@
-import { BaseTransformationStrategy, Transformation } from './base-transformation-strategy.js';
+import { BaseTransformationStrategy } from './base-transformation-strategy.js';
 import { buildVariablesScope, getIndentationFromLineStart, readComponentWithIndentation } from '../utils.js';
-import { TransformParser } from '../transformer/parser.js';
-
-/**
- * @type {Transformation[]}
- * @internal
- */
-const defaultTransformations = [];
-
-/**
- * Adds a transformation regex to the list of regexes.
- *
- * @internal
- * @param {string} strategyMethodName The name of the related method in the transformation strategy
- * @param {RegExp} regex The regex to add
- * @param {TransformParser|null} [parseFunction]  The function to use for parsing the match. What it returns will be given to the strategy method. If null, the matched groups will be given to the strategy method directly.
- */
-function addDefaultTransform(strategyMethodName, regex, parseFunction = null) {
-    defaultTransformations.push({ regex, strategyMethodName, parseFunction });
-}
-
-/**
- * Loops that are run at runtime by the ISPConfig template engine.
- */
-// `{% loop VARIABLE %}`
-addDefaultTransform('loop', /{%\s*loop\s*(\w+)\s*%}/g);
-// `{% endloop %}`
-addDefaultTransform('endloop', /{%\s*endloop\s*%}/g);
-
-/**
- * Dyninclude
- */
-// {% dyninclude 'COMPONENT' %}
-addDefaultTransform('dyninclude', /{%\s*dyninclude\s*((?:'[^']+?)'|"(?:[^']+?)"){1}\s*%}/g);
-
-/**
- * Hook
- */
-// {% hook 'HOOKNAME' %}
-addDefaultTransform('hook', /{%\s*hook\s*((?:'[^']+?)'|"(?:[^']+?)"){1}\s*%}/g);
+import { LogicToken, LogicTokenFlags, Node, ParentNode, SelfClosingNode, TransformParser } from '../transformer/parser.js';
+import { IfStatementBlock } from './abstract-transformation-strategy.js';
 
 /**
  * @public
@@ -47,11 +10,42 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
     /**
      * @inheritdoc
      */
-    override getTransformations(): Transformation[] {
+    override getLogicTokens(): LogicToken[] {
         return [
-            ...super.getTransformations(),
-            ...defaultTransformations,
+            ...super.getLogicTokens(),
+            { type: 'loop', flags: LogicTokenFlags.OpensScope },
+            { type: 'endloop', flags: LogicTokenFlags.ClosesScope },
+            { type: 'dyninclude' },
+            { type: 'hook' },
         ];
+    }
+
+    /**
+     * @inheritdoc
+     */
+    override transformNode(node: Node): string {
+        switch (node.type) {
+            case 'loop':
+                return this.parseLoop(<ParentNode>node);
+            case 'dyninclude':
+                return this.parseDyninclude(<SelfClosingNode>node);
+            case 'hook':
+                return this.parseHook(<SelfClosingNode>node);
+        }
+
+        return super.transformNode(node);
+    }
+
+    private parseLoop(node: ParentNode): string {
+        return this.loop(node.parameters);
+    }
+
+    private parseDyninclude(node: SelfClosingNode): string {
+        return this.dyninclude(node.parameters);
+    }
+
+    private parseHook(node: SelfClosingNode): string {
+        return this.hook(node.parameters);
     }
 
     /**
@@ -68,8 +62,9 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
     /**
      * @inheritdoc
      */
-    override render(component: string, variables: Record<string, string>, offset: number, string: string): string {
-        const { contents, path } = readComponentWithIndentation(this.transformer.getPath(), component, getIndentationFromLineStart(string, offset));
+    override render(component: string, variables: Record<string, string>): string {
+        const indentation = this.transformer.getCurrentIndentation();
+        const { contents, path } = readComponentWithIndentation(this.transformer.getPath(), component, indentation);
 
         this.transformer.pushToScope({
             ...variables,
@@ -130,18 +125,19 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
     /**
      * @inheritdoc
      */
-    override if(name: string, op: string, value: string, statements: string): string {
-        const knownIf = this.compileKnownIf(name, op, value, statements);
+    override if(statementBlocks: IfStatementBlock[]): string {
+        return '';
+        // const knownIf = this.compileKnownIf(name, op, value, statements);
 
-        if (knownIf !== null) {
-            return knownIf;
-        }
+        // if (knownIf !== null) {
+        //     return knownIf;
+        // }
 
-        if (op && value) {
-            return `{tmpl_if name="${name}" op="${op}" value="${value}"}${statements}{/tmpl_if}`;
-        }
+        // if (op && value) {
+        //     return `{tmpl_if name="${name}" op="${op}" value="${value}"}${statements}{/tmpl_if}`;
+        // }
 
-        return `{tmpl_if name="${name}"}${statements}{/tmpl_if}`;
+        // return `{tmpl_if name="${name}"}${statements}{/tmpl_if}`;
     }
 
     /**

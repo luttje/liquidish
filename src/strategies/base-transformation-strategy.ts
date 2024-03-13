@@ -1,31 +1,23 @@
 import { CancellationRequestedError } from "../transformer/cancellation-requested-error.js";
-import { TransformParser } from "../transformer/parser.js";
-import { buildVariablesScope, isNumericString, refreshedRegex } from "../utils.js";
-import { AbstractTransformationStrategy, MetaData } from "./abstract-transformation-strategy.js";
+import { LogicToken, LogicTokenFlags, Node, ParentNode, SelfClosingNode, TextNode } from "../transformer/parser.js";
+import { buildVariablesScope, isNumericString } from "../utils.js";
+import { AbstractTransformationStrategy, IfStatementBlock, MetaData } from "./abstract-transformation-strategy.js";
 
-export type Transformation = {
-    regex: RegExp;
-    strategyMethodName: string;
-    parseFunction?: TransformParser|null;
-};
-
-/**
- * @type {Transformation[]}
- * @internal
- */
-const defaultTransformations = [];
-
-/**
- * Adds a transformation regex to the list of regexes.
- *
- * @internal
- * @param {string} strategyMethodName The name of the related method in the transformation strategy
- * @param {RegExp} regex The regex to add
- * @param {TransformParser|null} [parseFunction]  The function to use for parsing the match. What it returns will be given to the strategy method. If null, the matched groups will be given to the strategy method directly.
- */
-function addDefaultTransform(strategyMethodName, regex, parseFunction = null) {
-    defaultTransformations.push({ regex, strategyMethodName, parseFunction });
-}
+export const defaultLogicTokens: LogicToken[] = [
+    { type: 'comment', flags: LogicTokenFlags.OpensScope },
+    { type: 'endcomment', flags: LogicTokenFlags.ClosesScope },
+    { type: 'if', flags: LogicTokenFlags.OpensScope },
+    { type: 'elseif', flags: LogicTokenFlags.OpensScope | LogicTokenFlags.ClosesScope },
+    { type: 'elsif', flags: LogicTokenFlags.OpensScope | LogicTokenFlags.ClosesScope },
+    { type: 'else', flags: LogicTokenFlags.OpensScope | LogicTokenFlags.ClosesScope },
+    { type: 'endif', flags: LogicTokenFlags.ClosesScope },
+    { type: 'unless', flags: LogicTokenFlags.OpensScope },
+    { type: 'endunless', flags: LogicTokenFlags.ClosesScope },
+    { type: 'for', flags: LogicTokenFlags.OpensScope },
+    { type: 'endfor', flags: LogicTokenFlags.ClosesScope },
+    { type: 'meta' },
+    { type: 'render' },
+];
 
 /**
  * Prevent users from using reserved keywords
@@ -58,32 +50,28 @@ function sanityCheckReservedKeywords(variables?: Record<string, any>) {
  * Custom transformations (wont be transformed to ISPConfig's template language)
  */
 
-// {% comment %}\nThis is a comment\nwith multiple lines\n{% endcomment %}
-export const regexForComment = /{%\s*comment\s*%}([\s\S]*?){%\s*endcomment\s*%}/g;
-addDefaultTransform('comment', regexForComment);
-
 // {% meta {
 //   "isChildOnly": true,
 //   "defaults": {
 //     "parameter": "value"
 //   }
 // } %}
-export const regexForMeta = /{%\s*meta\s*?(?:\s*\s*((?:[^%]+?|%(?!}))*))*?\s*%}/g;
-addDefaultTransform('meta', regexForMeta, (transformer, metaString) => {
-    let meta: MetaData = {};
+// export const regexForMeta = /{%\s*meta\s*?(?:\s*\s*((?:[^%]+?|%(?!}))*))*?\s*%}/g;
+// addDefaultTransform('meta', regexForMeta, (transformer, metaString) => {
+//     let meta: MetaData = {};
 
-    try {
-        meta = JSON.parse(metaString);
-    } catch (e) {
-        throw new Error(`Invalid JSON in meta tag: ${metaString}`);
-    }
+//     try {
+//         meta = JSON.parse(metaString);
+//     } catch (e) {
+//         throw new Error(`Invalid JSON in meta tag: ${metaString}`);
+//     }
 
-    sanityCheckReservedKeywords(meta.defaults);
+//     sanityCheckReservedKeywords(meta.defaults);
 
-    return [
-        meta,
-    ];
-});
+//     return [
+//         meta,
+//     ];
+// });
 
 // {% render 'COMPONENT' %}
 // {% render 'COMPONENT', variable: 'value', another: 'value' %}
@@ -95,142 +83,59 @@ addDefaultTransform('meta', regexForMeta, (transformer, metaString) => {
 //     ]
 // }
 // NOTE: For simplicty sake the JSON cannot contain %}
-export const regexForRender = /{%\s*render\s*((?:'[^']+?)'|"(?:[^']+?)"){1}(?:\s*,\s*((?:[^%]+?|%(?!}))*))*?\s*%}/g;
+export const regexForRender = /((?:'[^']+?)'|"(?:[^']+?)"){1}(?:\s*,\s*((?:[^%]+?|%(?!}))*))?/;
 export const regexForVariableString = /(\w+):\s*((?:"(?:[^"\\]|\\.)*?"|'(?:[^'\\]|\\.)*?'|\d+\.\d+|\d+|true|false|null))/g;
-addDefaultTransform('render', regexForRender, (transformer, component, variablesString) => {
-    const variables = {};
-
-    if (variablesString) {
-        variablesString = variablesString.trim();
-
-        // Try parse it as JSON
-        // TODO: This can silently fail if the JSON is invalid, the user should be notified, or we should just support JSON with a different syntax
-        try {
-            const parsed = JSON.parse(variablesString);
-
-            sanityCheckReservedKeywords(parsed);
-
-            if (typeof parsed === 'object') {
-                for (const [key, value] of Object.entries(parsed)) {
-                    variables[key] = value;
-                }
-            }
-        } catch (e) {
-            // It's not JSON, so it's a string with key-value pairs
-            variablesString.replace(regexForVariableString, (match, name, value) => {
-                const quoteType = value[0];
-                value = value.slice(1, -1);
-
-                // Unescape the value
-                value = value.replace(new RegExp(`\\\\${quoteType}`, 'g'), quoteType);
-
-                variables[name] = value;
-            });
-        }
-    }
-
-    component = component.slice(1, -1); // trim quotes
-
-    return [
-        component,
-        variables,
-    ];
-});
 
 // {% for item in items %}
 //     {{ item[0] }}="{{ item[1] }}"
 // {% endfor %}
-export const regexForLoopFor = /\{%\s*for\s+(\w+)\s+in\s+(\w+)\s*%\}(.*?)\{%\s*endfor\s*%\}/gs;
-addDefaultTransform('for', regexForLoopFor, (transformer, itemName, collectionName, statement) => {
-    const scope = transformer.getScope();
+// export const regexForLoopFor = /\{%\s*for\s+(\w+)\s+in\s+(\w+)\s*%\}(.*?)\{%\s*endfor\s*%\}/gs;
+// addDefaultTransform('for', regexForLoopFor, (transformer, itemName, collectionName, statement) => {
+//     const scope = transformer.getScope();
 
-    // trim only leading whitespace
-    statement = statement.replace(/^\s+/, '');
+//     // trim only leading whitespace
+//     statement = statement.replace(/^\s+/, '');
 
-    // Check if statement is a nested for loop, if it is, throw an error
-    if (refreshedRegex(regexForLoopFor).test(statement + ' {% endfor %}')) {
-        throw new Error('Nested for loops are not supported');
-    }
+//     // Check if statement is a nested for loop, if it is, throw an error
+//     if (refreshedRegex(regexForLoopFor).test(statement + ' {% endfor %}')) {
+//         throw new Error('Nested for loops are not supported');
+//     }
 
-    if (!Array.isArray(scope[collectionName])) {
-        throw new Error(`The collection ${collectionName} is not an array. It's a ${typeof scope[collectionName]} (in ${transformer.getPath()})}`);
-    }
+//     if (!Array.isArray(scope[collectionName])) {
+//         throw new Error(`The collection ${collectionName} is not an array. It's a ${typeof scope[collectionName]} (in ${transformer.getPath()})}`);
+//     }
 
-    return [
-        itemName,
-        collectionName,
-        statement
-    ];
-});
+//     return [
+//         itemName,
+//         collectionName,
+//         statement
+//     ];
+// });
 
 /**
  * Variable
  */
 // `{{ VARIABLE }}`
-export const regexForVariable = /{{\s*([\w\.]+?(?:\[[^\]]*?\])*)?\s*}}/g;
-addDefaultTransform('variable', regexForVariable);
+// export const regexForVariable = /{{\s*([\w\.]+?(?:\[[^\]]*?\])*)?\s*}}/g;
+// addDefaultTransform('variable', regexForVariable);
 
 /**
  * If-statement
  */
-// `{% if VARIABLE OPERATOR 'VALUE' %} ... {% endif %}`
+// `{% if VARIABLE OPERATOR 'VALUE' %} ... {% elsif ... %} ... {% else %} {% endif %}`
 // `{% if VARIABLE OPERATOR "VALUE" %} ... {% endif %}`
 // `{% if VARIABLE %} ... {% endif %}`
-export const regexForIf = /{%\s*if\s*([\w\.]+?)\s+?(?:(\S+)\s*((?:'[^']*?'|"[^"]*?")))*?\s*%}(.*){%\s*endif\s*%}/gs;
-export const regexForIfEnd = /{%\s*endif\s*%}/;
-addDefaultTransform('if', regexForIf, (transformer, name, op, value, statements) => {
-    // Find the first endif, and check if there are any other if/else/elseif/endif in the statements
-    const match = statements.match(regexForIfEnd);
 
-    if (match) {
-        const localStatements = statements.slice(0, match.index);
-        const remainingStatements = statements.slice(match.index + match[0].length);
+// addDefaultTransform('if', regexForFirstIfThroughLastEndif, (transformer, input) => {
+//     const tokens = tokenizeLiquid(input);
+//     const parsed = parseTokens(tokens);
 
-        // If there are any if/else/elseif/endif in the local statements,
-
-
-    return [
-        name,
-        op,
-        value ? value.slice(1, -1) : undefined,
-        statements
-    ];
-});
-
-
-export const regexForIfElseIf = /{%\s*elsif\s*?([\w\.]+?)\s*?(?:(\S+)\s*((?:'[^']*?)'|"(?:[^']*?)"))*?\s*%}/g;
-// addDefaultTransform('elsif', regexForIfElseIf, (transformer, name, op, value) => {
-//     if (op && value) {
-//         value = value.slice(1, -1); // trim quotes
-//         return [
-//             name,
-//             op,
-//             value,
-//         ];
-//     }
-
-//     return [
-//         name,
-//         undefined,
-//         undefined,
-//     ];
+//     console.log(parsed);
+//     // return [
+//     //     parsed
+//     // ];
+//     return [];
 // });
-
-// // `{% else %}`
-export const regexForIfElse = /{%\s*else\s*%}/g;
-// addDefaultTransform('else', regexForIfElse);
-// // `{% endif %}`
-// addDefaultTransform('endif', regexForIfEnd);
-
-/**
- * Unless-statement
- */
-// `{% unless VARIABLE %}`
-export const regexForUnless = /{%\s*?unless\s*?([\w\.]+?)\s*?%}(.*?){%\s*endunless\s*%}/gs;
-addDefaultTransform('unless', regexForUnless);
-// `{% endunless %}`
-export const regexForUnlessEnd = /{%\s*?endunless\s*?%}/g;
-// addDefaultTransform('endunless', regexForUnlessEnd);
 
 /**
  * @public
@@ -239,8 +144,159 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
     /**
      * @inheritdoc
      */
-    override getTransformations(): Transformation[] {
-        return defaultTransformations;
+    override getLogicTokens(): LogicToken[] {
+        return [
+            ...defaultLogicTokens,
+        ];
+    }
+
+    protected transformNode(node: Node): string {
+        switch (node.type) {
+            case 'comment':
+                return this.parseComment(<ParentNode>node);
+            case 'meta':
+                return this.parseMeta(<ParentNode>node);
+            case 'render':
+                return this.parseRender(<SelfClosingNode>node);
+            case 'for':
+                return this.parseFor(<ParentNode>node);
+            case 'if':
+                return this.parseIf(<ParentNode>node);
+            case 'unless':
+                return this.parseUnless(<ParentNode>node);
+            case 'variable':
+                return this.parseVariable(<SelfClosingNode>node);
+            case 'text':
+                return (<TextNode>node).value;
+            default:
+                throw new Error(`Unknown node type: ${node.type}`);
+        }
+    }
+
+    protected parseComment(node: ParentNode): string {
+        return this.comment(this.statementsToText(node.statements));
+    }
+
+    protected parseMeta(node: SelfClosingNode): string {
+        const metaData = JSON.parse(node.parameters);
+        return this.meta(metaData);
+    }
+
+    protected parseRender(node: SelfClosingNode): string {
+        const parameters = node.parameters;
+        const matches = parameters.match(regexForRender);
+
+        if (!matches) {
+            throw new Error(`Invalid render statement: ${parameters}`);
+        }
+
+        let component = matches[1];
+        const variablesString = matches[2];
+
+        const variables = {};
+
+        if (variablesString) {
+            // Try parse it as JSON
+            try {
+                const parsed = JSON.parse(variablesString);
+
+                sanityCheckReservedKeywords(parsed);
+
+                if (typeof parsed === 'object') {
+                    for (const [key, value] of Object.entries(parsed)) {
+                        variables[key] = value;
+                    }
+                }
+            } catch (e) {
+                // It's not JSON, so it's a string with key-value pairs
+                let match;
+
+                while ((match = regexForVariableString.exec(variablesString)) !== null) {
+                    const name = match[1];
+                    let value = match[2]
+                    const quoteType = value[0];
+                    value = value.slice(1, -1);
+
+                    // Unescape the value
+                    value = value.replace(new RegExp(`\\\\${quoteType}`, 'g'), quoteType);
+
+                    variables[name] = value;
+                }
+            }
+        }
+
+        component = component.slice(1, -1); // trim quotes
+
+        return this.render(component, variables);
+    }
+
+    protected parseFor(node: ParentNode): string {
+        const [itemName, collectionName, statement] = this.parseForItemNameCollectionNameAndStatement(node);
+        return this.for(itemName, collectionName, statement);
+    }
+
+    protected parseIf(node: ParentNode): string {
+        // Go through the if statement and parse it into a more usable format
+        const blocks: IfStatementBlock[] = [];
+
+        let currentBlock: IfStatementBlock = {
+            type: 'if',
+            name: '',
+            op: '',
+            value: '',
+            statements: '',
+        };
+
+        for (const child of node.statements) {
+            if (child.type === 'text') {
+                currentBlock.statements += (<TextNode>child).value;
+                continue;
+            }
+
+            const text = this.statementsToText(child.statements);
+
+            switch (child.type) {
+                case 'if':
+                    blocks.push(currentBlock);
+                    currentBlock = {
+                        type: 'if',
+                        name: text,
+                        op: '',
+                        value: '',
+                        statements: '',
+                    };
+                    break;
+                case 'elseif':
+                case 'elsif':
+                    blocks.push(currentBlock);
+                    currentBlock = {
+                        type: 'elseif',
+                        name: text,
+                        op: '',
+                        value: '',
+                        statements: '',
+                    };
+                    break;
+                case 'else':
+                    blocks.push(currentBlock);
+                    currentBlock = {
+                        type: 'else',
+                        statements: '',
+                    };
+                    break;
+                default:
+                    throw new Error(`Unknown if statement block type: ${child.type}`);
+            }
+        }
+    }
+
+    protected parseUnless(node: ParentNode): string {
+        const [name, statements] = this.parseUnlessNameAndStatements(node);
+        return this.unless(name, statements);
+    }
+
+    protected parseVariable(node: SelfClosingNode): string {
+        return this.variable(node.parameters);
     }
 
     /**

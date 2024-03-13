@@ -35,7 +35,13 @@
         <span>{{ complex.human.name }}</span>
     {% endif %}
     {% if complex.human.age < '25' %}
-        <span>{{ complex.human.age }}</span>
+        {% if complex.human.age < '18' %}
+        Minor
+        {% elsif complex.human.age > '64' %}
+        Senior
+        {% else %}
+        Adult
+        {% endif %}
     {% elsif complex.human.age == '25' %}
         <span>Cool</span>
     {% else %}

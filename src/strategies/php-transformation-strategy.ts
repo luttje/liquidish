@@ -1,5 +1,7 @@
-import { BaseTransformationStrategy, Transformation } from './base-transformation-strategy.js';
+import { BaseTransformationStrategy } from './base-transformation-strategy.js';
 import { buildVariablesScope, getIndentationFromLineStart, readComponentWithIndentation } from '../utils.js';
+import { IfStatementBlock } from './abstract-transformation-strategy.js';
+import { LogicToken, LogicTokenFlags } from '../transformer/parser.js';
 
 /**
  * @augments BaseTransformationStrategy
@@ -9,17 +11,11 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
     /**
      * @inheritdoc
      */
-    override getTransformations(): Transformation[] {
-        const transformations = [];
-
-        transformations.push(...super.getTransformations());
-
-        transformations.push({
-            strategyMethodName: 'include',
-            regex: /{%\s*include\s*((?:'[^']+?)'|"(?:[^']+?)"){1}\s*%}/g,
-        });
-
-        return transformations;
+    override getLogicTokens(): LogicToken[] {
+        return [
+            ...super.getLogicTokens(),
+            { type: 'include' },
+        ];
     }
 
     /**
@@ -36,8 +32,9 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
     /**
      * @inheritdoc
      */
-    override render(component: string, variables: Record<string, string>, offset: number, string: string): string {
-        const { contents, path } = readComponentWithIndentation(this.transformer.getPath(), component, getIndentationFromLineStart(string, offset));
+    override render(component: string, variables: Record<string, string>): string {
+        const indentation = this.transformer.getCurrentIndentation();
+        const { contents, path } = readComponentWithIndentation(this.transformer.getPath(), component, indentation);
 
         this.transformer.pushToScope({
             ...variables,
@@ -85,18 +82,19 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
     /**
      * @inheritdoc
      */
-    override if(name: string, op: string, value: string, statements: string): string {
-        const knownIf = this.compileKnownIf(name, op, value, statements);
+    override if(statementBlocks: IfStatementBlock[]): string {
+        return '';
+        // const knownIf = this.compileKnownIf(name, op, value, statements);
 
-        if (knownIf !== null) {
-            return knownIf;
-        }
+        // if (knownIf !== null) {
+        //     return knownIf;
+        // }
 
-        if (op && value) {
-            return `<?php if ($${name} ${op} '${value}') : ?>${statements}<?php endif; ?>`;
-        }
+        // if (op && value) {
+        //     return `<?php if ($${name} ${op} '${value}') : ?>${statements}<?php endif; ?>`;
+        // }
 
-        return `<?php if ($${name}) : ?>${statements}<?php endif; ?>`;
+        // return `<?php if ($${name}) : ?>${statements}<?php endif; ?>`;
     }
 
     /**

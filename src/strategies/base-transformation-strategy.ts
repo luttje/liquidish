@@ -42,6 +42,38 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
         ];
     }
 
+    protected statementsToText(statements: Node[], exceptLastIfToken: boolean = false): string {
+        let output = '';
+
+        for (let i = 0; i < statements.length; i++) {
+            const node = statements[i];
+
+            if (exceptLastIfToken && (node.type === 'elseif' || node.type === 'else')) {
+                continue;
+            }
+
+            let nodeOutput = this.transformNode(node);
+
+            if (nodeOutput === null) {
+                return;
+            }
+
+            output += this.handleWhitespaceCommands(node, nodeOutput);
+        }
+
+        return output;
+    }
+
+    handleWhitespaceCommands(node: Node, nodeOutput: string) {
+        if (node.whitespaceCommandPre === '-') {
+            return nodeOutput.trimStart();
+        } else if (node.whitespaceCommandPost === '-') {
+            return nodeOutput.trimEnd();
+        }
+
+        return nodeOutput;
+    }
+
     protected transformNode(node: Node): string | null {
         this.transformer.setCurrentIndentation(node.indentation);
 
@@ -136,12 +168,17 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
 
         // The first node is the if-statement, the last node in the statements array may be and else/elseif-statement, inside that the same pattern repeats
         let currentNode = node;
-        let isOutputting = true;
+        let isRuntimeCompiling = false;
+        let anyIfConditionMet = false;
 
         while (currentNode) {
             if (currentNode.type === 'else') {
-                if (isOutputting) {
-                    output += this.else();
+                if (isRuntimeCompiling) {
+                    if (!anyIfConditionMet) {
+                        output += this.statementsToText(currentNode.statements);
+                    }
+                } else {
+                    output += this.handleWhitespaceCommands(currentNode, this.else());
                     output += this.statementsToText(currentNode.statements);
                 }
 
@@ -155,33 +192,33 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
             const value = matches[3] ? unescapeValue(matches[3]) : undefined;
 
             if (scope[name] !== undefined) {
-                isOutputting = false;
+                isRuntimeCompiling = true;
             }
 
-            if (isOutputting) {
-                if (currentNode.type === 'if') {
-                    output += this.if(name, op, value);
-                } else if (currentNode.type === 'elseif') {
-                    output += this.elseif(name, op, value);
-                } else {
-                    throw new Error(`Unknown node type: ${currentNode.type}`);
-                }
-
-                output += this.statementsToText(currentNode.statements, true);
-            } else {
+            if (isRuntimeCompiling) {
                 const result = this.performIf(scope[name], op, value);
 
                 if (result) {
                     output += this.statementsToText(currentNode.statements, true);
                     break;
                 }
+            } else {
+                if (currentNode.type === 'if') {
+                    output += this.handleWhitespaceCommands(currentNode, this.if(name, op, value));
+                } else if (currentNode.type === 'elseif') {
+                    output += this.handleWhitespaceCommands(currentNode, this.elseif(name, op, value));
+                } else {
+                    throw new Error(`Unknown node type: ${currentNode.type}`);
+                }
+
+                output += this.statementsToText(currentNode.statements, true);
             }
 
             currentNode = findNextStatementInIfStatement(currentNode);
         }
 
-        if (isOutputting) {
-            output += this.endif();
+        if (!isRuntimeCompiling) {
+            output += this.handleWhitespaceCommands(node, this.endif());
         }
 
         return output;
@@ -209,9 +246,9 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
             return '';
         }
 
-        let output = this.unless(name);
+        let output = this.handleWhitespaceCommands(node, this.unless(name));
         output += this.statementsToText(node.statements);
-        output += this.endunless();
+        output += this.handleWhitespaceCommands(node, this.endunless());
 
         return output;
     }
@@ -340,7 +377,7 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
 
             this.transformer.pushToScope(variables);
 
-            const transformed = this.transformer.transform(this.statementsToText(statements, false, true));
+            const transformed = this.transformer.transform(this.statementsToText(statements, false));
 
             // Clean up the scope after processing a block/component
             this.transformer.popScope();

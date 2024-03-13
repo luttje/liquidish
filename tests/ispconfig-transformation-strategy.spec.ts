@@ -3,6 +3,8 @@ import { resolve } from 'path';
 import { fixturesPath, readFixtureFile } from './test-utils';
 import { LiquidishTransformer } from '../src/transformer/transformer';
 import { ISPConfigTransformationStrategy } from '../src/strategies/ispconfig-transformation-strategy';
+import { parseLiquid, tokenizeLiquid } from '../src/transformer/parser';
+import { defaultLogicTokens } from '../src/strategies/base-transformation-strategy';
 
 function getISPConfigTransform(contents: string, path?: string) {
     path = path ?? fixturesPath;
@@ -122,7 +124,7 @@ describe('ISPConfig Transformation Strategy', () => {
 
     it('should transform render statements using default parameters in metadata', () => {
         const transformed = getISPConfigTransform(`{% render './render-attributes-defaults.liquid', overrideDefault: true %}`, resolve(fixturesPath, 'render-attributes.liquid'));
-        const expected = readFixtureFile('render-attributes-defaults.ispconfig.expected.htm');
+        const expected = readFixtureFile('render-attributes-defaults.expected.htm');
 
         expect(transformed).toBe(expected);
     });

@@ -17,7 +17,7 @@ describe('parseLiquid', () => {
         expect(parseLiquid(input, defaultLogicTokens)).toEqual(expected);
     });
 
-    it('should parse a simple liquid string', () => {
+    it('should parse a liquid string', () => {
         const input = `{% meta isChildOnly %}{% render "component" %}{% if some.nested.variable %}{% render "componentB" %}{% endif %}`;
 
         const expected = [
@@ -188,7 +188,7 @@ describe('parseLiquid', () => {
 });
 
 describe('tokenizeLiquid', () => {
-    it('should tokenize a simple liquid string', () => {
+    it('should tokenize a liquid string', () => {
         const input = `{% meta isChildOnly %}{% render "component" %}{% if true %}{% render "component" %}{% endif %}`;
 
         const expected = [
@@ -221,7 +221,7 @@ describe('tokenizeLiquid', () => {
         expect(tokenizeLiquid(input, defaultLogicTokens)).toEqual(expected);
     });
 
-    it('should tokenize a simple liquid string with variables', () => {
+    it('should tokenize a liquid string with variables', () => {
         const input = `{% meta isChildOnly %}\n\t{% render "component" %}\n\t{% if true %}\n\t\t{% render "component" %}\n\t\t{{ variable }}\n\t{% endif %}`;
 
         const expected = [
@@ -284,7 +284,7 @@ describe('tokenizeLiquid', () => {
         expect(tokenizeLiquid(input, defaultLogicTokens)).toEqual(expected);
     });
 
-    it('should tokenize a simple liquid string with comments', () => {
+    it('should tokenize a liquid string with comments', () => {
         const input = `\t{% comment %}\n\t\tThis is a comment\n\t{% endcomment %}`;
 
         const expected = [
@@ -311,11 +311,24 @@ describe('tokenizeLiquid', () => {
         expect(tokenizeLiquid(input, defaultLogicTokens)).toEqual(expected);
     });
 
-    it('should tokenize a simple liquid string with unless', () => {
+    it('should tokenize a liquid string with unless', () => {
         const input = `{% unless variable %}Here's some text 🧐{% endunless %}`;
 
         const expected = [
             { type: 'unless', indentation: 0, parameters: 'variable' },
+            { type: 'text', indentation: 0, value: `Here's some text 🧐` },
+            { type: 'endunless', indentation: 0, }
+        ];
+
+        expect(tokenizeLiquid(input, defaultLogicTokens)).toEqual(expected);
+    });
+
+    it('should tokenize a liquid string with whitespace control', () => {
+        const input = `\n{%- if variable -%}\nHere's some text 🧐{% endunless %}`;
+
+        const expected = [
+            { type: 'text', indentation: 0, value: `` },
+            { type: 'if', indentation: 0, parameters: 'variable', whitespaceCommandPre: '-', whitespaceCommandPost: '-' },
             { type: 'text', indentation: 0, value: `Here's some text 🧐` },
             { type: 'endunless', indentation: 0, }
         ];
@@ -381,11 +394,11 @@ describe('findNextStatementInIfStatement', () => {
 
         const ifNode = (<ParentNode>parsed[0]);
 
-        const nextStatement = findNextStatementInIfStatement(ifNode);
+        const nextStatement = findNextStatementInIfStatement(ifNode)!;
         expect(nextStatement.type).toBe('elseif');
         expect(nextStatement.parameters).toBe(`some.other.variable == 'x'`);
 
-        const nextNextStatement = findNextStatementInIfStatement(<ParentNode>nextStatement);
+        const nextNextStatement = findNextStatementInIfStatement(<ParentNode>nextStatement)!;
         expect(nextNextStatement.type).toBe('else');
 
         const nextNextNextStatement = findNextStatementInIfStatement(<ParentNode>nextNextStatement);

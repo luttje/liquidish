@@ -29,32 +29,6 @@ export abstract class AbstractTransformationStrategy {
         return output;
     }
 
-    protected statementsToText(statements: Node[], exceptLastIfToken: boolean = false, trimTextIndent: boolean = false): string {
-        let output = '';
-
-        for (let i = 0; i < statements.length; i++) {
-            const node = statements[i];
-
-            if (exceptLastIfToken && (node.type === 'elseif' || node.type === 'else')) {
-                continue;
-            }
-
-            const nodeOutput = this.transformNode(node);
-
-            if (nodeOutput === null) {
-                return;
-            }
-
-            if (trimTextIndent && node.type === 'text') {
-                output += nodeOutput.replace(/^\n+\s+/, '');
-            } else {
-                output += nodeOutput;
-            }
-        }
-
-        return output;
-    }
-
     protected abstract transformNode(node: Node): string | null;
 
     public abstract getLogicTokens(): LogicToken[];

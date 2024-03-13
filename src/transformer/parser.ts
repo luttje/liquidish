@@ -36,6 +36,8 @@ export const typeRenaming = {
 export type TokenBase = {
     type: string;
     indentation: number;
+    whitespaceCommandPre?: WhitespaceCommand;
+    whitespaceCommandPost?: WhitespaceCommand;
 };
 
 export type TextToken = {
@@ -105,8 +107,8 @@ export function buildLogicTokenRegex(logicTokens: LogicToken[]) {
 }
 
 export function tokenizeLiquid(input: string, logicTokens: LogicToken[]): Token[] {
-    const tokens = [];
-    let match;
+    const tokens: Token[] = [];
+    let match: RegExpExecArray;
 
     const regex = buildLogicTokenRegex(logicTokens);
 
@@ -114,6 +116,7 @@ export function tokenizeLiquid(input: string, logicTokens: LogicToken[]): Token[
         const indentation = getIndentationFromLineStart(input, match.index);
         const whitespaceCommandPre = match[regexForTokensGroupLogicWhitespaceCommandPre] as WhitespaceCommand;
         const whitespaceCommandPost = match[regexForTokensGroupLogicWhitespaceCommandPost] as WhitespaceCommand;
+        let newToken: Token;
 
         if (match[regexForTokensGroupLogic]) {
             const parameters = match[regexForTokensGroupLogicParameters] !== ''
@@ -123,7 +126,7 @@ export function tokenizeLiquid(input: string, logicTokens: LogicToken[]): Token[
             let type = match[regexForTokensGroupLogicType];
             type = typeRenaming[type] || type;
 
-            tokens.push({
+            tokens.push(newToken = {
                 type,
                 indentation,
                 ...(whitespaceCommandPre && { whitespaceCommandPre }),
@@ -131,7 +134,7 @@ export function tokenizeLiquid(input: string, logicTokens: LogicToken[]): Token[
                 ...(parameters && { parameters })
             });
         } else if (match[regexForTokensGroupVariable]) {
-            tokens.push(<SelfClosingNode>{
+            tokens.push(newToken = {
                 type: 'variable',
                 indentation,
                 ...(whitespaceCommandPre && { whitespaceCommandPre }),
@@ -139,13 +142,34 @@ export function tokenizeLiquid(input: string, logicTokens: LogicToken[]): Token[
                 parameters: match[regexForTokensGroupVariableName].trim(),
             });
         } else if (match[regexForTokensGroupText]) {
-            tokens.push(<TextNode>{
+            tokens.push(newToken = {
                 type: 'text',
                 indentation,
                 ...(whitespaceCommandPre && { whitespaceCommandPre }),
                 ...(whitespaceCommandPost && { whitespaceCommandPost }),
                 value: match[regexForTokensGroupText]
             });
+        } else {
+            throw new Error('Unknown token type');
+        }
+
+        // Look before the token we just added to see if we need to trim whitespace
+        if (tokens.length > 1) {
+            const previousToken = tokens[tokens.length - 2];
+
+            if (whitespaceCommandPre === '-' ) {
+                if (isTextToken(previousToken)) {
+                    previousToken.value = previousToken.value.trimEnd();
+                    newToken.indentation = 0;
+                }
+            }
+
+            if (isLiquidToken(previousToken) && previousToken.whitespaceCommandPost === '-') {
+                newToken.indentation = 0;
+                if (isTextToken(newToken)) {
+                    newToken.value = newToken.value.trimStart();
+                }
+            }
         }
     }
 

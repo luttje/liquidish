@@ -1,5 +1,5 @@
 import { CancellationRequestedError } from "../transformer/cancellation-requested-error.js";
-import { LogicToken, LogicTokenFlags, Node, ParentNode, SelfClosingNode, TextNode, findNextStatementInIfStatement, isParentNode, regexForVariable, walkNodes } from "../transformer/parser.js";
+import { LogicToken, LogicTokenFlags, Node, ParentNode, SelfClosingNode, TextNode, findNextStatementInIfStatement, regexForVariable } from "../transformer/parser.js";
 import { buildVariablesScope, isNumericString, readComponentWithIndentation, unescapeValue } from "../utils.js";
 import { AbstractTransformationStrategy, MetaData } from "./abstract-transformation-strategy.js";
 
@@ -173,7 +173,6 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
 
                 if (result) {
                     output += this.statementsToText(currentNode.statements, true);
-                    console.log(`[${output}]`);
                     break;
                 }
             }
@@ -232,7 +231,8 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
                 return variable;
             }
 
-            return variable.replace(regexForVariable, (match, name) => {
+            // return variable.replace(regexForVariable, (match, name) => {
+            return variable.replace(regexForVariable, (match, preWhitespaceCommand, name, postWhitespaceCommand) => {
                 return this.variable(name);
             });
         }

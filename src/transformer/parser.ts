@@ -3,14 +3,20 @@ import { LiquidishTransformer } from "./transformer.js";
 
 export type TransformParser = (transformer: LiquidishTransformer, ...args: any[]) => any[];
 
-export const regexForVariable = /{{\s*([\w\.]+?(?:\[[^\]]*?\])*)?\s*}}/g;
-export const regexForTokens = /({%\s*(LOGIC_TOKENS)\s*(.*?)\s*?%})|(VARIABLE)|(.+?)(?={%|\{\{|$)/gs;
+export const regexForVariable = /{{(-?)\s*([\w\.]+?(?:\[[^\]]*?\])*)?\s*(-?)}}/g;
+export const regexForTokens = /({%(-?)\s*(LOGIC_TOKENS)\s*(.*?)\s*?(-?)%})|(VARIABLE)|(.+?)(?={%|\{\{|$)/gs;
 export const regexForTokensGroupLogic = 1;
-export const regexForTokensGroupLogicType = 2;
-export const regexForTokensGroupLogicParameters = 3;
-export const regexForTokensGroupText = 6;
-export const regexForTokensGroupVariable = 4;
-export const regexForTokensGroupVariableName = 5;
+export const regexForTokensGroupLogicWhitespaceCommandPre = 2;
+export const regexForTokensGroupLogicType = 3;
+export const regexForTokensGroupLogicParameters = 4;
+export const regexForTokensGroupLogicWhitespaceCommandPost = 5;
+export const regexForTokensGroupText = 10;
+export const regexForTokensGroupVariable = 6;
+export const regexForTokensGroupVariableWhitespaceCommandPre = 7;
+export const regexForTokensGroupVariableName = 8;
+export const regexForTokensGroupVariableWhitespaceCommandPost = 9;
+
+export type WhitespaceCommand = '-';
 
 export enum LogicTokenFlags {
     None = 0,
@@ -55,6 +61,8 @@ export function isTextToken(token: Token): token is TextToken {
 export type NodeBase = {
     type: string;
     indentation: number;
+    whitespaceCommandPre?: WhitespaceCommand;
+    whitespaceCommandPost?: WhitespaceCommand;
 };
 
 export type ParentNode = {
@@ -104,6 +112,8 @@ export function tokenizeLiquid(input: string, logicTokens: LogicToken[]): Token[
 
     while ((match = regex.exec(input)) !== null) {
         const indentation = getIndentationFromLineStart(input, match.index);
+        const whitespaceCommandPre = match[regexForTokensGroupLogicWhitespaceCommandPre] as WhitespaceCommand;
+        const whitespaceCommandPost = match[regexForTokensGroupLogicWhitespaceCommandPost] as WhitespaceCommand;
 
         if (match[regexForTokensGroupLogic]) {
             const parameters = match[regexForTokensGroupLogicParameters] !== ''
@@ -116,18 +126,24 @@ export function tokenizeLiquid(input: string, logicTokens: LogicToken[]): Token[
             tokens.push({
                 type,
                 indentation,
+                ...(whitespaceCommandPre && { whitespaceCommandPre }),
+                ...(whitespaceCommandPost && { whitespaceCommandPost }),
                 ...(parameters && { parameters })
             });
         } else if (match[regexForTokensGroupVariable]) {
             tokens.push(<SelfClosingNode>{
                 type: 'variable',
                 indentation,
+                ...(whitespaceCommandPre && { whitespaceCommandPre }),
+                ...(whitespaceCommandPost && { whitespaceCommandPost }),
                 parameters: match[regexForTokensGroupVariableName].trim(),
             });
         } else if (match[regexForTokensGroupText]) {
             tokens.push(<TextNode>{
                 type: 'text',
                 indentation,
+                ...(whitespaceCommandPre && { whitespaceCommandPre }),
+                ...(whitespaceCommandPost && { whitespaceCommandPost }),
                 value: match[regexForTokensGroupText]
             });
         }

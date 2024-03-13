@@ -1,9 +1,8 @@
 import { BaseTransformationStrategy } from './base-transformation-strategy.js';
 import { unescapeValue } from '../utils.js';
-import { LogicToken, LogicTokenFlags, Node, ParentNode, SelfClosingNode } from '../transformer/parser.js';
+import { LogicToken, Node, SelfClosingNode } from '../transformer/parser.js';
 
 /**
- * @augments BaseTransformationStrategy
  * @public
  */
 export class PHPTransformationStrategy extends BaseTransformationStrategy {
@@ -23,14 +22,10 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
     override transformNode(node: Node): string | null {
         switch (node.type) {
             case 'include':
-                return this.parseInclude(<ParentNode>node);
+                return this.include((<SelfClosingNode>node).parameters);
         }
 
         return super.transformNode(node);
-    }
-
-    private parseInclude(node: SelfClosingNode): string {
-        return this.include(node.parameters);
     }
 
     /**

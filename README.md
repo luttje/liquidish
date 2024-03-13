@@ -91,7 +91,7 @@ We'll assume you have a Vite project set up. If not, you can create one with `np
 
 > ### Next steps
 >
-> - **[📚 Learn about the Liquidish Syntax](./docs/liquidish-syntax)**
+> - **[📚 Learn about the Liquidish Syntax](./docs/liquidish-syntax.md)**
 >
 > - **[🗺 Discover the ISPConfig or PHP transformation strategies](./docs/transformation-strategies.md)**.
 >

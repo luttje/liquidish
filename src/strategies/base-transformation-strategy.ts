@@ -1,6 +1,6 @@
 import { CancellationRequestedError } from "../transformer/cancellation-requested-error.js";
 import { LogicToken, LogicTokenFlags, Node, ParentNode, SelfClosingNode, TextNode, findNextStatementInIfStatement, isParentNode, regexForVariable, walkNodes } from "../transformer/parser.js";
-import { buildVariablesScope, isNumericString } from "../utils.js";
+import { buildVariablesScope, isNumericString, readComponentWithIndentation, unescapeValue } from "../utils.js";
 import { AbstractTransformationStrategy, IfStatementBlock, MetaData } from "./abstract-transformation-strategy.js";
 
 export const defaultLogicTokens: LogicToken[] = [
@@ -19,105 +19,15 @@ export const defaultLogicTokens: LogicToken[] = [
     { type: 'render' },
 ];
 
-/**
- *
- * Available transformations:
- *
- */
-
-/**
- * Custom transformations (wont be transformed to ISPConfig's template language)
- */
-
-// {% meta {
-//   "isChildOnly": true,
-//   "defaults": {
-//     "parameter": "value"
-//   }
-// } %}
-// export const regexForMeta = /{%\s*meta\s*?(?:\s*\s*((?:[^%]+?|%(?!}))*))*?\s*%}/g;
-// addDefaultTransform('meta', regexForMeta, (transformer, metaString) => {
-//     let meta: MetaData = {};
-
-//     try {
-//         meta = JSON.parse(metaString);
-//     } catch (e) {
-//         throw new Error(`Invalid JSON in meta tag: ${metaString}`);
-//     }
-
-//     sanityCheckReservedKeywords(meta.defaults);
-
-//     return [
-//         meta,
-//     ];
-// });
-
-// {% render 'COMPONENT' %}
-// {% render 'COMPONENT', variable: 'value', another: 'value' %}
-// {% render 'render-json-component.liquid', {
-//     "slot": "{{ logout_txt }} {{ cpuser }}",
-//     "attributes": [
-//         ["id", "logout-button"],
-//         ["data-load-content", "login/logout.php"]
-//     ]
-// }
-// NOTE: For simplicty sake the JSON cannot contain %}
+// ! NOTE: For simplicty sake the JSON cannot contain %}
 export const regexForRender = /((?:'[^']+?)'|"(?:[^']+?)"){1}(?:\s*,\s*((?:[^%]+?|%(?!}))*))?/;
 export const regexForVariableString = /(\w+):\s*((?:"(?:[^"\\]|\\.)*?"|'(?:[^'\\]|\\.)*?'|\d+\.\d+|\d+|true|false|null))/g;
 
-// {% for item in items %}
-//     {{ item[0] }}="{{ item[1] }}"
-// {% endfor %}
-// export const regexForLoopFor = /\{%\s*for\s+(\w+)\s+in\s+(\w+)\s*%\}(.*?)\{%\s*endfor\s*%\}/gs;
-// addDefaultTransform('for', regexForLoopFor, (transformer, itemName, collectionName, statement) => {
-//     const scope = transformer.getScope();
+// item in items
+export const regexForLoopFor = /(\w+)\s+in\s+(\w+)/;
 
-//     // trim only leading whitespace
-//     statement = statement.replace(/^\s+/, '');
-
-//     // Check if statement is a nested for loop, if it is, throw an error
-//     if (refreshedRegex(regexForLoopFor).test(statement + ' {% endfor %}')) {
-//         throw new Error('Nested for loops are not supported');
-//     }
-
-//     if (!Array.isArray(scope[collectionName])) {
-//         throw new Error(`The collection ${collectionName} is not an array. It's a ${typeof scope[collectionName]} (in ${transformer.getPath()})}`);
-//     }
-
-//     return [
-//         itemName,
-//         collectionName,
-//         statement
-//     ];
-// });
-
-/**
- * Variable
- */
-// `{{ VARIABLE }}`
-// export const regexForVariable = /{{\s*([\w\.]+?(?:\[[^\]]*?\])*)?\s*}}/g;
-// addDefaultTransform('variable', regexForVariable);
-
-/**
- * If-statement
- */
 // `VARIABLE OPERATOR 'VALUE'`
 export const regexForIf = /([\w\.]+)(?:\s+(\S+)\s*((?:'[^']*?')|(?:"[^"]*?")))?/;
-
-function unescapeValue(value: string): string {
-    const quoteType = value[0];
-
-    if (quoteType !== '"' && quoteType !== "'") {
-        return value;
-    }
-
-    value = value.slice(1, -1);
-
-    // Unescape the value
-    value = value.replace(new RegExp(`\\\\${quoteType}`, 'g'), quoteType);
-
-    return value;
-}
 
 /**
  * @public
@@ -132,7 +42,9 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
         ];
     }
 
-    protected transformNode(node: Node): string {
+    protected transformNode(node: Node): string | null {
+        this.transformer.setCurrentIndentation(node.indentation);
+
         switch (node.type) {
             case 'comment':
                 return this.parseComment(<ParentNode>node);
@@ -146,9 +58,8 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
                 return this.parseIf(<ParentNode>node);
             case 'elseif':
             case 'else':
-                // TODO: Should we not try transform earlier?
-                console.warn(`The node type "${node.type}" is not supported by the transformation strategy`);
-                return '';
+                // These are handled by if
+                return null;
             case 'unless':
                 return this.parseUnless(<ParentNode>node);
             case 'variable':
@@ -211,8 +122,11 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
     }
 
     protected parseFor(node: ParentNode): string {
-        const [itemName, collectionName, statement] = this.parseForItemNameCollectionNameAndStatement(node);
-        return this.for(itemName, collectionName, statement);
+        const matches = node.parameters.match(regexForLoopFor);
+        const itemName = matches[1];
+        const collectionName = matches[2];
+
+        return this.for(itemName, collectionName, node.statements);
     }
 
     protected parseIf(node: ParentNode): string {
@@ -245,16 +159,7 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
 
         let ifStatementBlocks: IfStatementBlock[] = [];
 
-        // The first node is the if-statement, the last node in the statements array may be and else/elseif-statement, inside that the same repeats
-
-        // ifStatementBlocks.push({
-        //     type: 'if',
-        //     name,
-        //     op,
-        //     value,
-        //     statements: this.statementsToText(node.statements, true),
-        // });
-
+        // The first node is the if-statement, the last node in the statements array may be and else/elseif-statement, inside that the same pattern repeats
         let currentNode = node;
 
         while (currentNode) {
@@ -413,5 +318,53 @@ export abstract class BaseTransformationStrategy extends AbstractTransformationS
             default:
                 throw new Error(`Invalid operator: ${op}`);
         }
+    }
+
+    /**
+     * @inheritdoc
+     */
+    protected for(itemName: string, collectionName: string, statements: Node[]): string {
+        const scope = this.transformer.getScope();
+
+        if (!Array.isArray(scope[collectionName])) {
+            throw new Error(`The collection ${collectionName} is not an array. It's a ${typeof scope[collectionName]} (in ${this.transformer.getPath()})}`);
+        }
+
+        /** @type {any[]} */
+        const collection = scope[collectionName];
+
+        return collection.map(item => {
+            const variables = {};
+            buildVariablesScope(item, itemName, variables);
+
+            this.transformer.pushToScope(variables);
+
+            const transformed = this.transformer.transform(this.statementsToText(statements, false, true));
+
+            // Clean up the scope after processing a block/component
+            this.transformer.popScope();
+
+            return transformed;
+        }).join('');
+    }
+
+    /**
+     * @inheritdoc
+     */
+    override render(component: string, variables: Record<string, string>): string {
+        const indentation = this.transformer.getCurrentIndentation();
+        const { contents, path } = readComponentWithIndentation(this.transformer.getPath(), component, indentation);
+
+        this.transformer.pushToScope({
+            ...variables,
+            path
+        });
+
+        const transformed = this.transformer.transform(contents);
+
+        // Clean up the scope after processing a block/component
+        this.transformer.popScope();
+
+        return transformed;
     }
 }

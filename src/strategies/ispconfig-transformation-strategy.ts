@@ -23,7 +23,7 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
     /**
      * @inheritdoc
      */
-    override transformNode(node: Node): string {
+    override transformNode(node: Node): string | null {
         switch (node.type) {
             case 'loop':
                 return this.parseLoop(<ParentNode>node);
@@ -58,55 +58,6 @@ export class ISPConfigTransformationStrategy extends BaseTransformationStrategy 
 
         return '';
     }
-
-    /**
-     * @inheritdoc
-     */
-    override render(component: string, variables: Record<string, string>): string {
-        const indentation = this.transformer.getCurrentIndentation();
-        const { contents, path } = readComponentWithIndentation(this.transformer.getPath(), component, indentation);
-
-        this.transformer.pushToScope({
-            ...variables,
-            path
-        });
-
-        const transformed = this.transformer.transform(contents);
-
-        // Clean up the scope after processing a block/component
-        this.transformer.popScope();
-
-        return transformed;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    override for(itemName: string, collectionName: string, statement: string): string {
-        const scope = this.transformer.getScope();
-
-        if (!Array.isArray(scope[collectionName])) {
-            throw new Error(`The collection ${collectionName} is not an array. It's a ${typeof scope[collectionName]} (in ${this.transformer.getPath()})}`);
-        }
-
-        /** @type {any[]} */
-        const collection = scope[collectionName];
-
-        return collection.map(item => {
-            const variables = {};
-            buildVariablesScope(item, itemName, variables);
-
-            this.transformer.pushToScope(variables);
-
-            const transformed = this.transformer.transform(statement);
-
-            // Clean up the scope after processing a block/component
-            this.transformer.popScope();
-
-            return transformed;
-        }).join('');
-    }
-
 
     /**
      * @inheritdoc

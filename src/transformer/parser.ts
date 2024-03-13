@@ -1,3 +1,4 @@
+import { getIndentationFromLineStart } from "../utils.js";
 import { LiquidishTransformer } from "./transformer.js";
 
 export type TransformParser = (transformer: LiquidishTransformer, ...args: any[]) => any[];
@@ -26,15 +27,20 @@ export const typeRenaming = {
     elsif: 'elseif'
 };
 
+export type TokenBase = {
+    type: string;
+    indentation: number;
+};
+
 export type TextToken = {
     type: 'text';
     value: string;
-};
+} & TokenBase;
 
 export type LiquidToken = {
     type: string;
     parameters?: string;
-};
+} & TokenBase;
 
 export type Token = TextToken | LiquidToken;
 
@@ -46,21 +52,24 @@ export function isTextToken(token: Token): token is TextToken {
     return (token as TextToken).type === 'text';
 }
 
-export type ParentNode = {
+export type NodeBase = {
     type: string;
-    parameters?: string;
-    statements: Node[];
+    indentation: number;
 };
 
-export type SelfClosingNode = {
-    type: string;
+export type ParentNode = {
     parameters?: string;
-};
+    statements: Node[];
+} & NodeBase;
+
+export type SelfClosingNode = {
+    parameters?: string;
+} & NodeBase;
 
 export type TextNode = {
     type: 'text';
     value: string;
-};
+} & NodeBase;
 
 export type Node = ParentNode | SelfClosingNode | TextNode;
 
@@ -94,6 +103,8 @@ export function tokenizeLiquid(input: string, logicTokens: LogicToken[]): Token[
     const regex = buildLogicTokenRegex(logicTokens);
 
     while ((match = regex.exec(input)) !== null) {
+        const indentation = getIndentationFromLineStart(input, match.index);
+
         if (match[regexForTokensGroupLogic]) {
             const parameters = match[regexForTokensGroupLogicParameters] !== ''
                 ? match[regexForTokensGroupLogicParameters]
@@ -104,16 +115,19 @@ export function tokenizeLiquid(input: string, logicTokens: LogicToken[]): Token[
 
             tokens.push({
                 type,
+                indentation,
                 ...(parameters && { parameters })
             });
         } else if (match[regexForTokensGroupVariable]) {
             tokens.push(<SelfClosingNode>{
                 type: 'variable',
+                indentation,
                 parameters: match[regexForTokensGroupVariableName].trim(),
             });
         } else if (match[regexForTokensGroupText]) {
             tokens.push(<TextNode>{
                 type: 'text',
+                indentation,
                 value: match[regexForTokensGroupText]
             });
         }
@@ -152,7 +166,8 @@ export function parseTokens(tokens: Token[], logicTokens: LogicToken[]): Node[] 
         if (opensScope.includes(token.type)) {
             const newNode: ParentNode = {
                 type: token.type,
-                statements: []
+                statements: [],
+                indentation: token.indentation
             };
 
             if (isLiquidToken(token) && token.parameters) {
@@ -171,12 +186,14 @@ export function parseTokens(tokens: Token[], logicTokens: LogicToken[]): Node[] 
         } else if (isTextToken(token)) {
             currentBlock.statements.push(<TextNode>{
                 type: 'text',
-                value: token.value
+                indentation: token.indentation,
+                value: token.value,
             });
         } else {
             currentBlock.statements.push(<SelfClosingNode>{
                 type: token.type,
-                ...(token.parameters && { parameters: token.parameters })
+                indentation: token.indentation,
+                ...(token.parameters && { parameters: token.parameters }),
             });
         }
     });

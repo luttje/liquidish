@@ -42,6 +42,8 @@ export class LiquidishTransformer {
      */
     private basePath: string | null;
 
+    private currentIndentation: number;
+
     constructor(options: LiquidishTransformerOptions = {}) {
         if (!options.strategyBuilder) {
             throw new Error('No strategy builder provided');
@@ -108,8 +110,12 @@ export class LiquidishTransformer {
         return scope;
     }
 
+    setCurrentIndentation(indentation: number): void {
+        this.currentIndentation = indentation;
+    }
+
     getCurrentIndentation(): number {
-        return 0; // TODO
+        return this.currentIndentation;
     }
 
     /**

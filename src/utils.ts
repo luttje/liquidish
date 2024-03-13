@@ -6,6 +6,21 @@ export function refreshedRegex(regex: RegExp) {
     return new RegExp(regex.source, regex.flags);
 }
 
+export function unescapeValue(value: string): string {
+    const quoteType = value[0];
+
+    if (quoteType !== '"' && quoteType !== "'") {
+        return value;
+    }
+
+    value = value.slice(1, -1);
+
+    // Unescape the value
+    value = value.replace(new RegExp(`\\\\${quoteType}`, 'g'), quoteType);
+
+    return value;
+}
+
 /**
  * Trims the trailing newline from a string.
  *
@@ -54,7 +69,11 @@ export function isNumericString(value: any): boolean {
 export function getIndentationFromLineStart(string, offset) {
     const beginningOfLine = string.slice(0, offset)
         .lastIndexOf('\n') + 1;
-    return offset - beginningOfLine;
+
+    const regex = /^\s*/;
+    const match = regex.exec(string.slice(beginningOfLine, offset));
+
+    return match[0].length;
 }
 
 /**

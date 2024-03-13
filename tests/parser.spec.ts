@@ -10,6 +10,7 @@ describe('parseLiquid', () => {
             {
                 type: 'text',
                 value: 'This is a % simple string %\n\nasd',
+                indentation: 0,
             }
         ];
 
@@ -22,18 +23,22 @@ describe('parseLiquid', () => {
         const expected = [
             {
                 type: 'meta',
+                indentation: 0,
                 parameters: 'isChildOnly',
             },
             {
                 type: 'render',
+                indentation: 0,
                 parameters: `"component"`,
             },
             {
                 type: 'if',
+                indentation: 0,
                 parameters: 'some.nested.variable',
                 statements: [
                     {
                         type: 'render',
+                        indentation: 0,
                         parameters: `"componentB"`,
                     }
                 ]
@@ -49,13 +54,16 @@ describe('parseLiquid', () => {
         const expected = [
             {
                 type: 'comment',
+                indentation: 0,
                 statements: [
                     {
                         type: 'if',
+                        indentation: 0,
                         parameters: 'some.nested.variable',
                         statements: [
                             {
                                 type: 'render',
+                                indentation: 0,
                                 parameters: `"componentB"`,
                             }
                         ]
@@ -91,43 +99,53 @@ describe('parseLiquid', () => {
         const expected = [
             {
                 type: 'if',
+                indentation: 0,
                 parameters: 'some.nested.variable',
                 statements: [
                     {
                         type: 'render',
+                        indentation: 0,
                         parameters: `"component"`,
                     },
                     {
                         type: 'if',
+                        indentation: 0,
                         parameters: 'some.other.variable',
                         statements: [
                             {
                                 type: 'render',
+                                indentation: 0,
                                 parameters: `"componentB"`,
                             }
                         ]
                     },
                     {
                         type: 'elseif',
+                        indentation: 0,
                         parameters: 'some.other.variable',
                         statements: [
                             {
                                 type: 'variable',
+                                indentation: 0,
                                 parameters: `my.var`,
                             },
                             {
                                 type: 'if',
+                                indentation: 0,
                                 parameters: 'some.other.variable',
                                 statements: [
                                     {
                                         type: 'render',
+                                        indentation: 0,
                                         parameters: `"componentD"`,
                                     },
                                     {
                                         type: 'else',
+                                        indentation: 0,
                                         statements: [
                                             {
                                                 type: 'render',
+                                                indentation: 0,
                                                 parameters: `"componentE"`,
                                             },
                                         ],
@@ -136,17 +154,21 @@ describe('parseLiquid', () => {
                             },
                             {
                                 type: 'else',
+                                indentation: 0,
                                 statements: [
                                     {
                                         type: 'render',
+                                        indentation: 0,
                                         parameters: `"componentF"`,
                                     },
                                     {
                                         type: 'if',
+                                        indentation: 0,
                                         parameters: 'some.other.variable',
                                         statements: [
                                             {
                                                 type: 'render',
+                                                indentation: 0,
                                                 parameters: `"componentG"`,
                                             }
                                         ]
@@ -170,11 +192,30 @@ describe('tokenizeLiquid', () => {
         const input = `{% meta isChildOnly %}{% render "component" %}{% if true %}{% render "component" %}{% endif %}`;
 
         const expected = [
-            { type: 'meta', parameters: 'isChildOnly' },
-            { type: 'render', parameters: '"component"' },
-            { type: 'if', parameters: 'true' },
-            { type: 'render', parameters: '"component"' },
-            { type: 'endif' }
+            {
+                type: 'meta',
+                indentation: 0,
+                parameters: 'isChildOnly',
+            },
+            {
+                type: 'render',
+                indentation: 0,
+                parameters: '"component"',
+            },
+            {
+                type: 'if',
+                indentation: 0,
+                parameters: 'true',
+            },
+            {
+                type: 'render',
+                indentation: 0,
+                parameters: '"component"',
+            },
+            {
+                type: 'endif',
+                indentation: 0,
+            },
         ];
 
         expect(tokenizeLiquid(input, defaultLogicTokens)).toEqual(expected);
@@ -184,17 +225,60 @@ describe('tokenizeLiquid', () => {
         const input = `{% meta isChildOnly %}\n\t{% render "component" %}\n\t{% if true %}\n\t\t{% render "component" %}\n\t\t{{ variable }}\n\t{% endif %}`;
 
         const expected = [
-            { type: 'meta', parameters: 'isChildOnly' },
-            { type: 'text', value: '\n\t' },
-            { type: 'render', parameters: '"component"' },
-            { type: 'text', value: '\n\t' },
-            { type: 'if', parameters: 'true' },
-            { type: 'text', value: '\n\t\t' },
-            { type: 'render', parameters: '"component"' },
-            { type: 'text', value: '\n\t\t' },
-            { type: 'variable', parameters: 'variable' },
-            { type: 'text', value: '\n\t' },
-            { type: 'endif' }
+            {
+                type: 'meta',
+                indentation: 0,
+                parameters: 'isChildOnly',
+            },
+            {
+                type: 'text',
+                indentation: 0,
+                value: '\n\t',
+            },
+            {
+                type: 'render',
+                indentation: 1,
+                parameters: '"component"',
+            },
+            {
+                type: 'text',
+                indentation: 1,
+                value: '\n\t',
+            },
+            {
+                type: 'if',
+                indentation: 1,
+                parameters: 'true',
+            },
+            {
+                type: 'text',
+                indentation: 1,
+                value: '\n\t\t',
+            },
+            {
+                type: 'render',
+                indentation: 2,
+                parameters: '"component"',
+            },
+            {
+                type: 'text',
+                indentation: 2,
+                value: '\n\t\t',
+            },
+            {
+                type: 'variable',
+                indentation: 2,
+                parameters: 'variable',
+            },
+            {
+                type: 'text',
+                indentation: 2,
+                value: '\n\t',
+            },
+            {
+                type: 'endif',
+                indentation: 1,
+            }
         ];
 
         expect(tokenizeLiquid(input, defaultLogicTokens)).toEqual(expected);
@@ -206,14 +290,22 @@ describe('tokenizeLiquid', () => {
         const expected = [
             {
                 type: 'text',
+                indentation: 0,
                 value: `\t`
             },
-            { type: 'comment' },
+            {
+                type: 'comment',
+                indentation: 1,
+            },
             {
                 type: 'text',
+                indentation: 1,
                 value: `\n\t\tThis is a comment\n\t`
             },
-            { type: 'endcomment' }
+            {
+                type: 'endcomment',
+                indentation: 1,
+            }
         ];
 
         expect(tokenizeLiquid(input, defaultLogicTokens)).toEqual(expected);
@@ -223,9 +315,9 @@ describe('tokenizeLiquid', () => {
         const input = `{% unless variable %}Here's some text 🧐{% endunless %}`;
 
         const expected = [
-            { type: 'unless', parameters: 'variable' },
-            { type: 'text', value: `Here's some text 🧐` },
-            { type: 'endunless' }
+            { type: 'unless', indentation: 0, parameters: 'variable' },
+            { type: 'text', indentation: 0, value: `Here's some text 🧐` },
+            { type: 'endunless', indentation: 0, }
         ];
 
         expect(tokenizeLiquid(input, defaultLogicTokens)).toEqual(expected);

@@ -54,7 +54,7 @@ export abstract class AbstractTransformationStrategy {
         return output;
     }
 
-    protected statementsToText(statements: Node[], exceptLastIfToken: boolean = false): string {
+    protected statementsToText(statements: Node[], exceptLastIfToken: boolean = false, trimTextIndent: boolean = false): string {
         let output = '';
 
         for (let i = 0; i < statements.length; i++) {
@@ -65,14 +65,24 @@ export abstract class AbstractTransformationStrategy {
             }
 
             walkNodes(node, (node) => {
-                output += this.transformNode(node);
+                const nodeOutput = this.transformNode(node);
+
+                if (nodeOutput === null) {
+                    return;
+                }
+
+                if (trimTextIndent && node.type === 'text') {
+                    output += nodeOutput.replace(/^\n+\s+/, '');
+                } else {
+                    output += nodeOutput;
+                }
             });
         }
 
         return output;
     }
 
-    protected abstract transformNode(node: Node): string;
+    protected abstract transformNode(node: Node): string | null;
 
     public abstract getLogicTokens(): LogicToken[];
 
@@ -81,8 +91,6 @@ export abstract class AbstractTransformationStrategy {
     public abstract comment(comment: string): string;
 
     public abstract render(component: string, variables: Record<string, string>): string;
-
-    public abstract for(itemName: string, collectionName: string, statements: string): string;
 
     public abstract if(statementBlocks: IfStatementBlock[]): string;
 

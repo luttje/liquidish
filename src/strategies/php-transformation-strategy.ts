@@ -1,5 +1,6 @@
-import { BaseTransformationStrategy, Transformation } from './base-transformation-strategy.js';
-import { buildVariablesScope, getIndentationFromLineStart, readComponentWithIndentation } from '../utils.js';
+import { BaseTransformationStrategy } from './base-transformation-strategy.js';
+import { unescapeValue } from '../utils.js';
+import { LogicToken, LogicTokenFlags, Node, ParentNode, SelfClosingNode } from '../transformer/parser.js';
 
 /**
  * @augments BaseTransformationStrategy
@@ -9,17 +10,27 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
     /**
      * @inheritdoc
      */
-    override getTransformations(): Transformation[] {
-        const transformations = [];
+    override getLogicTokens(): LogicToken[] {
+        return [
+            ...super.getLogicTokens(),
+            { type: 'include' },
+        ];
+    }
 
-        transformations.push(...super.getTransformations());
+    /**
+     * @inheritdoc
+     */
+    override transformNode(node: Node): string | null {
+        switch (node.type) {
+            case 'include':
+                return this.parseInclude(<ParentNode>node);
+        }
 
-        transformations.push({
-            strategyMethodName: 'include',
-            regex: /{%\s*include\s*((?:'[^']+?)'|"(?:[^']+?)"){1}\s*%}/g,
-        });
+        return super.transformNode(node);
+    }
 
-        return transformations;
+    private parseInclude(node: SelfClosingNode): string {
+        return this.include(node.parameters);
     }
 
     /**
@@ -36,65 +47,7 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
     /**
      * @inheritdoc
      */
-    override render(component: string, variables: Record<string, string>, offset: number, string: string): string {
-        const { contents, path } = readComponentWithIndentation(this.transformer.getPath(), component, getIndentationFromLineStart(string, offset));
-
-        this.transformer.pushToScope({
-            ...variables,
-            path
-        });
-
-        return this.transformer.transform(contents);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    override for(itemName: string, collectionName: string, statement: string): string {
-        const scope = this.transformer.getScope();
-
-        if (!Array.isArray(scope[collectionName])) {
-            throw new Error(`The collection ${collectionName} is not an array. It's a ${typeof scope[collectionName]} (in ${this.transformer.getPath()})}`);
-        }
-
-        return scope[collectionName].map(item => {
-            const variables = {};
-            buildVariablesScope(item, itemName, variables);
-
-            this.transformer.pushToScope(variables);
-
-            return this.transformer.transform(statement);
-        }).join('');
-    }
-
-    private compileKnownIf(name: string, op: string, value: string, keyword = 'if ('): string | null {
-        const scope = this.transformer.getScope();
-
-        // If the variable is defined in the current scope, use it
-        if (scope[name] !== undefined) {
-            // TODO: Find a better way to show/hide the content.
-            // This was easiest, since if we remove the if, we also have to find which
-            // else /endif to remove. Or which statements belong to the if.
-            if (this.performIf(scope[name], op, value)) {
-                return `<?php ${keyword}true) : ?>`;
-            } else {
-                return `<?php ${keyword}false) : ?>`;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * @inheritdoc
-     */
-    override if(name: string, op: string, value: string): string {
-        const knownIf = this.compileKnownIf(name, op, value);
-
-        if (knownIf !== null) {
-            return knownIf;
-        }
-
+    override if(name: string, op?: string, value?: string): string {
         if (op && value) {
             return `<?php if ($${name} ${op} '${value}') : ?>`;
         }
@@ -105,13 +58,7 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
     /**
      * @inheritdoc
      */
-    override elsif(name: string, op: string, value: string): string {
-        const knownIf = this.compileKnownIf(name, op, value, 'elseif (');
-
-        if (knownIf !== null) {
-            return knownIf;
-        }
-
+    override elseif(name: string, op?: string, value?: string): string {
         if (op && value) {
             return `<?php elseif ($${name} ${op} '${value}') : ?>`;
         }
@@ -123,26 +70,20 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
      * @inheritdoc
      */
     override else(): string {
-        return '<?php else : ?>';
+        return `<?php else : ?>`;
     }
 
     /**
      * @inheritdoc
      */
     override endif(): string {
-        return '<?php endif; ?>';
+        return `<?php endif; ?>`;
     }
 
     /**
      * @inheritdoc
      */
     override unless(name: string): string {
-        const knownIf = this.compileKnownIf(name, '!=', 'true', 'if (!');
-
-        if (knownIf !== null) {
-            return knownIf;
-        }
-
         return `<?php if (!$${name}) : ?>`;
     }
 
@@ -150,26 +91,18 @@ export class PHPTransformationStrategy extends BaseTransformationStrategy {
      * @inheritdoc
      */
     override endunless(): string {
-        return '<?php endif; ?>';
+        return `<?php endif; ?>`;
     }
 
     /**
      * @inheritdoc
      */
     override variable(variable: string): string {
-        const scope = this.transformer.getScope();
-
-        // If the variable is defined in the current scope, use it
-        if (scope[variable] !== undefined) {
-            return scope[variable];
-        }
-
-        // Otherwise it's a template variable
         return `<?php echo $${variable}; ?>`;
     }
 
-    public include(component: string): string {
-        component = component.slice(1, -1); // trim quotes
-        return `<?php include '${component}'; ?>`;
+    public include(name: string): string {
+        name = unescapeValue(name);
+        return `<?php include '${name}'; ?>`;
     }
 }

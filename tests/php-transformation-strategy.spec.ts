@@ -18,47 +18,37 @@ describe('PHP Transformation Strategy', () => {
     });
 
     it('should transform if statements', () => {
-        const transformed = getPHPConfigTransform(`{% if VARIABLE %}`);
-        expect(transformed).toBe('<?php if ($VARIABLE) : ?>');
+        const transformed = getPHPConfigTransform(`{% if VARIABLE %}A{% endif %}`);
+        expect(transformed).toBe('<?php if ($VARIABLE) : ?>A<?php endif; ?>');
     });
 
     it('should transform if statements with operators', () => {
-        const transformed1 = getPHPConfigTransform(`{% if VARIABLE OPERATOR 'VALUE' %}`);
-        const transformed2 = getPHPConfigTransform(`{% if VARIABLE OPERATOR "VALUE" %}`);
-        expect(transformed1).toBe('<?php if ($VARIABLE OPERATOR \'VALUE\') : ?>');
-        expect(transformed2).toBe('<?php if ($VARIABLE OPERATOR \'VALUE\') : ?>');
+        const transformed1 = getPHPConfigTransform(`{% if VARIABLE OPERATOR 'VALUE' %}A{% endif %}`);
+        const transformed2 = getPHPConfigTransform(`{% if VARIABLE OPERATOR "VALUE" %}A{% endif %}`);
+        expect(transformed1).toBe('<?php if ($VARIABLE OPERATOR \'VALUE\') : ?>A<?php endif; ?>');
+        expect(transformed2).toBe('<?php if ($VARIABLE OPERATOR \'VALUE\') : ?>A<?php endif; ?>');
     });
 
     it('should transform elsif statements', () => {
-        const transformed = getPHPConfigTransform(`{% elsif VARIABLE %}`);
-        expect(transformed).toBe('<?php elseif ($VARIABLE) : ?>');
+        const transformed = getPHPConfigTransform(`{% if VARIABLE %}A{% elsif VARIABLE %}B{% endif %}`);
+        expect(transformed).toBe('<?php if ($VARIABLE) : ?>A<?php elseif ($VARIABLE) : ?>B<?php endif; ?>');
     });
 
     it('should transform elsif statements with operators', () => {
-        const transformed1 = getPHPConfigTransform(`{% elsif VARIABLE OPERATOR 'VALUE' %}`);
-        const transformed2 = getPHPConfigTransform(`{% elsif VARIABLE OPERATOR "VALUE" %}`);
-        expect(transformed1).toBe('<?php elseif ($VARIABLE OPERATOR \'VALUE\') : ?>');
-        expect(transformed2).toBe('<?php elseif ($VARIABLE OPERATOR \'VALUE\') : ?>');
+        const transformed1 = getPHPConfigTransform(`{% if VARIABLE %}A{% elsif VARIABLE OPERATOR 'VALUE' %}B{% endif %}`);
+        const transformed2 = getPHPConfigTransform(`{% if VARIABLE %}A{% elsif VARIABLE OPERATOR "VALUE" %}B{% endif %}`);
+        expect(transformed1).toBe('<?php if ($VARIABLE) : ?>A<?php elseif ($VARIABLE OPERATOR \'VALUE\') : ?>B<?php endif; ?>');
+        expect(transformed2).toBe('<?php if ($VARIABLE) : ?>A<?php elseif ($VARIABLE OPERATOR \'VALUE\') : ?>B<?php endif; ?>');
     });
 
     it('should transform else statements', () => {
-        const transformed = getPHPConfigTransform(`{% else %}`);
-        expect(transformed).toBe('<?php else : ?>');
-    });
-
-    it('should transform endif statements', () => {
-        const transformed = getPHPConfigTransform(`{% endif %}`);
-        expect(transformed).toBe('<?php endif; ?>');
+        const transformed = getPHPConfigTransform(`{% if VARIABLE %}A{% else %}B{% endif %}`);
+        expect(transformed).toBe('<?php if ($VARIABLE) : ?>A<?php else : ?>B<?php endif; ?>');
     });
 
     it('should transform unless statements', () => {
-        const transformed = getPHPConfigTransform(`{% unless VARIABLE %}`);
-        expect(transformed).toBe('<?php if (!$VARIABLE) : ?>');
-    });
-
-    it('should transform endunless statements', () => {
-        const transformed = getPHPConfigTransform(`{% endunless %}`);
-        expect(transformed).toBe('<?php endif; ?>');
+        const transformed = getPHPConfigTransform(`{% unless VARIABLE %}X{% endunless %}`);
+        expect(transformed).toBe('<?php if (!$VARIABLE) : ?>X<?php endif; ?>');
     });
 
     it('should transform include statements', () => {
@@ -115,7 +105,7 @@ describe('PHP Transformation Strategy', () => {
 
     it('should transform render statements using default parameters in metadata', () => {
         const transformed = getPHPConfigTransform(`{% render './render-attributes-defaults.liquid', overrideDefault: true %}`, resolve(fixturesPath, 'render-attributes.liquid'));
-        const expected = readFixtureFile('render-attributes-defaults.php.expected.php');
+        const expected = readFixtureFile('render-attributes-defaults.expected.htm');
 
         expect(transformed).toBe(expected);
     });

@@ -3,6 +3,8 @@ import { resolve } from 'path';
 import { fixturesPath, readFixtureFile } from './test-utils';
 import { LiquidishTransformer } from '../src/transformer/transformer';
 import { ISPConfigTransformationStrategy } from '../src/strategies/ispconfig-transformation-strategy';
+import { parseLiquid, tokenizeLiquid } from '../src/transformer/parser';
+import { defaultLogicTokens } from '../src/strategies/base-transformation-strategy';
 
 function getISPConfigTransform(contents: string, path?: string) {
     path = path ?? fixturesPath;
@@ -18,58 +20,48 @@ describe('ISPConfig Transformation Strategy', () => {
     });
 
     it('should transform if statements', () => {
-        const transformed = getISPConfigTransform(`{% if VARIABLE %}`);
-        expect(transformed).toBe('{tmpl_if name="VARIABLE"}');
+        const transformed = getISPConfigTransform(`{% if VARIABLE %}A{% endif %}`);
+        expect(transformed).toBe('{tmpl_if name="VARIABLE"}A{/tmpl_if}');
     });
 
     it('should transform if statements with operators', () => {
-        const transformed1 = getISPConfigTransform(`{% if VARIABLE OPERATOR 'VALUE' %}`);
-        const transformed2 = getISPConfigTransform(`{% if VARIABLE OPERATOR "VALUE" %}`);
-        expect(transformed1).toBe('{tmpl_if name="VARIABLE" op="OPERATOR" value="VALUE"}');
-        expect(transformed2).toBe('{tmpl_if name="VARIABLE" op="OPERATOR" value="VALUE"}');
+        const transformed1 = getISPConfigTransform(`{% if VARIABLE OPERATOR 'VALUE' %}A{% endif %}`);
+        const transformed2 = getISPConfigTransform(`{% if VARIABLE OPERATOR "VALUE" %}A{% endif %}`);
+        expect(transformed1).toBe('{tmpl_if name="VARIABLE" op="OPERATOR" value="VALUE"}A{/tmpl_if}');
+        expect(transformed2).toBe('{tmpl_if name="VARIABLE" op="OPERATOR" value="VALUE"}A{/tmpl_if}');
     });
 
     it('should transform elsif statements', () => {
-        const transformed = getISPConfigTransform(`{% elsif VARIABLE %}`);
-        expect(transformed).toBe('{tmpl_elseif name="VARIABLE"}');
+        const transformed = getISPConfigTransform(`{% if VARIABLE %}A{% elsif VARIABLE %}B{% endif %}`);
+        expect(transformed).toBe('{tmpl_if name="VARIABLE"}A{tmpl_elseif name="VARIABLE"}B{/tmpl_if}');
     });
 
     it('should transform elsif statements with operators', () => {
-        const transformed1 = getISPConfigTransform(`{% elsif VARIABLE OPERATOR 'VALUE' %}`);
-        const transformed2 = getISPConfigTransform(`{% elsif VARIABLE OPERATOR "VALUE" %}`);
-        expect(transformed1).toBe('{tmpl_elseif name="VARIABLE" op="OPERATOR" value="VALUE"}');
-        expect(transformed2).toBe('{tmpl_elseif name="VARIABLE" op="OPERATOR" value="VALUE"}');
+        const transformed1 = getISPConfigTransform(`{% if VARIABLE %}A{% elsif VARIABLE OPERATOR 'VALUE' %}B{% endif %}`);
+        const transformed2 = getISPConfigTransform(`{% if VARIABLE %}A{% elsif VARIABLE OPERATOR "VALUE" %}B{% endif %}`);
+        expect(transformed1).toBe('{tmpl_if name="VARIABLE"}A{tmpl_elseif name="VARIABLE" op="OPERATOR" value="VALUE"}B{/tmpl_if}');
+        expect(transformed2).toBe('{tmpl_if name="VARIABLE"}A{tmpl_elseif name="VARIABLE" op="OPERATOR" value="VALUE"}B{/tmpl_if}');
     });
 
     it('should transform else statements', () => {
-        const transformed = getISPConfigTransform(`{% else %}`);
-        expect(transformed).toBe('{tmpl_else}');
-    });
-
-    it('should transform endif statements', () => {
-        const transformed = getISPConfigTransform(`{% endif %}`);
-        expect(transformed).toBe('{/tmpl_if}');
+        const transformed = getISPConfigTransform(`{% if VARIABLE %}A{% else %}B{% endif %}`);
+        expect(transformed).toBe('{tmpl_if name="VARIABLE"}A{tmpl_else}B{/tmpl_if}');
     });
 
     it('should transform unless statements', () => {
-        const transformed = getISPConfigTransform(`{% unless VARIABLE %}`);
-        expect(transformed).toBe('{tmpl_unless name="VARIABLE"}');
+        const transformed = getISPConfigTransform(`{% unless VARIABLE %}X{% endunless %}`);
+        expect(transformed).toBe('{tmpl_unless name="VARIABLE"}X{/tmpl_unless}');
     });
 
-    it('should transform endunless statements', () => {
-        const transformed = getISPConfigTransform(`{% endunless %}`);
-        expect(transformed).toBe('{/tmpl_unless}');
-    });
+    // it('should transform loop statements', () => {
+    //     const transformed = getISPConfigTransform(`{% loop VARIABLE %}`);
+    //     expect(transformed).toBe('{tmpl_loop name="VARIABLE"}');
+    // });
 
-    it('should transform loop statements', () => {
-        const transformed = getISPConfigTransform(`{% loop VARIABLE %}`);
-        expect(transformed).toBe('{tmpl_loop name="VARIABLE"}');
-    });
-
-    it('should transform endloop statements', () => {
-        const transformed = getISPConfigTransform(`{% endloop %}`);
-        expect(transformed).toBe('{/tmpl_loop}');
-    });
+    // it('should transform endloop statements', () => {
+    //     const transformed = getISPConfigTransform(`{% endloop %}`);
+    //     expect(transformed).toBe('{/tmpl_loop}');
+    // });
 
     it('should transform dyninclude statements', () => {
         const transformed1 = getISPConfigTransform(`{% dyninclude 'COMPONENT' %}`);
@@ -132,7 +124,7 @@ describe('ISPConfig Transformation Strategy', () => {
 
     it('should transform render statements using default parameters in metadata', () => {
         const transformed = getISPConfigTransform(`{% render './render-attributes-defaults.liquid', overrideDefault: true %}`, resolve(fixturesPath, 'render-attributes.liquid'));
-        const expected = readFixtureFile('render-attributes-defaults.ispconfig.expected.htm');
+        const expected = readFixtureFile('render-attributes-defaults.expected.htm');
 
         expect(transformed).toBe(expected);
     });
@@ -174,12 +166,6 @@ describe('ISPConfig Transformation Strategy', () => {
     it('should not show multiline comment statements by default', () => {
         const transformed = getISPConfigTransform(`{% comment %}\nThis is a comment\nwith multiple lines\n{% endcomment %}`);
         expect(transformed).toBe('');
-    });
-
-    it('should throw an error when a nested for loop is detected', () => {
-        expect(
-            () => getISPConfigTransform(`{% render './render-nested-for-loops', { "items": [1, 2, 3], "subitems": [4,5,6] } %}`, resolve(fixturesPath, 'render-nested-for-loops.liquid'))
-        ).toThrowError('Nested for loops are not supported');
     });
 });
 

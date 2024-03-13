@@ -18,13 +18,6 @@ export function readFixtureFile(name: string): string {
     return trimTrailingNewline(readFileSync(resolve(fixturesPath, name), 'utf8'));
 }
 
-/**
- * Gets all regular expressions from the provided strategy.
- */
-export function getAllTransformationRegExp(strategy: AbstractTransformationStrategy): RegExp[] {
-    return strategy.getTransformations().map((t) => t.regex);
-}
-
 export function assertMatch(regex: RegExp, str: string, expected: boolean = true) {
     expect(refreshedRegex(regex).test(str)).toBe(expected);
 }

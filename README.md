@@ -1,3 +1,7 @@
+> [!WARNING]
+> This is a work in progress. It's not finished yet.
+> The documentation below may be incorrect or incomplete.
+
 # 💧 `Liquidish`
 
 [![tests](https://github.com/luttje/liquidish/actions/workflows/tests.yml/badge.svg)](https://github.com/luttje/liquidish/actions/workflows/tests.yml)
@@ -8,11 +12,7 @@ This variant of [Liquid](https://shopify.github.io/liquid/) was created to compi
 
 > [**🔭 Check out `luttje/ispconfig-tailwind-theme`**](https://github.com/luttje/ispconfig-tailwind-theme) for an example of how this package can be used.
 
-&nbsp;
-
-> [!WARNING]
-> This is a work in progress. It's not finished yet.
-> The documentation below may be incorrect or incomplete.
+![Example of compiled code](./docs/compiled-code.png)
 
 ## 🚀 Using Liquidish
 
